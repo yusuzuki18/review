@@ -1,0 +1,1347 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ReMemory — 忘却曲線復習管理</title>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0f14;
+    --surface: #13161e;
+    --surface2: #1a1e2a;
+    --border: #252a38;
+    --accent: #5b8fff;
+    --accent2: #ff6b6b;
+    --accent3: #43e97b;
+    --accent4: #f7b731;
+    --text: #e8eaf0;
+    --text-sub: #7a8099;
+    --text-dim: #454a60;
+    --card-radius: 14px;
+    --font: 'Zen Kaku Gothic New', sans-serif;
+    --mono: 'DM Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(91,143,255,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(91,143,255,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .app-wrap {
+    position: relative;
+    z-index: 1;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 16px 80px;
+  }
+
+  /* HEADER */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 28px 0 20px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 28px;
+  }
+
+  .logo {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+
+  .logo-text {
+    font-size: 26px;
+    font-weight: 900;
+    letter-spacing: -0.5px;
+    background: linear-gradient(135deg, var(--accent), #a78bfa);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .logo-sub {
+    font-size: 11px;
+    color: var(--text-sub);
+    font-family: var(--mono);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+
+  .header-date {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--text-sub);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 6px 14px;
+    border-radius: 100px;
+  }
+
+  /* STATS BAR */
+  .stats-bar {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 28px;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--card-radius);
+    padding: 16px;
+    text-align: center;
+    transition: border-color 0.2s;
+  }
+
+  .stat-card:hover { border-color: var(--accent); }
+
+  .stat-num {
+    font-size: 28px;
+    font-weight: 900;
+    font-family: var(--mono);
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+
+  .stat-label {
+    font-size: 11px;
+    color: var(--text-sub);
+    letter-spacing: 0.5px;
+  }
+
+  .stat-today .stat-num { color: var(--accent2); }
+  .stat-overdue .stat-num { color: var(--accent4); }
+  .stat-total .stat-num { color: var(--accent); }
+  .stat-done .stat-num { color: var(--accent3); }
+
+  /* TABS */
+  .tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 24px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 4px;
+  }
+
+  .tab-btn {
+    flex: 1;
+    padding: 9px 12px;
+    border: none;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--text-sub);
+    font-family: var(--font);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+
+  .tab-btn.active {
+    background: var(--accent);
+    color: #fff;
+    font-weight: 700;
+  }
+
+  .tab-btn:not(.active):hover {
+    background: var(--surface2);
+    color: var(--text);
+  }
+
+  /* PANEL */
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* ADD FORM */
+  .add-form-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--card-radius);
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+
+  .add-form-card h2 {
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 18px;
+    color: var(--text-sub);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-family: var(--mono);
+  }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .form-row.single { grid-template-columns: 1fr; }
+
+  label {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-sub);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  input[type="text"], textarea, select {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 14px;
+    padding: 10px 14px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    resize: none;
+  }
+
+  input[type="text"]:focus,
+  textarea:focus,
+  select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(91,143,255,0.15);
+  }
+
+  select option { background: var(--surface); }
+
+  textarea { height: 60px; }
+
+  .btn-add {
+    width: 100%;
+    padding: 13px;
+    border: none;
+    border-radius: 9px;
+    background: linear-gradient(135deg, var(--accent), #a78bfa);
+    color: #fff;
+    font-family: var(--font);
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 8px;
+    transition: opacity 0.2s, transform 0.1s;
+    letter-spacing: 0.5px;
+  }
+
+  .btn-add:hover { opacity: 0.9; }
+  .btn-add:active { transform: scale(0.99); }
+
+  /* SECTION HEADER */
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+
+  .section-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-sub);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    font-family: var(--mono);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 22px;
+    height: 22px;
+    border-radius: 100px;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 0 6px;
+  }
+
+  .badge-red { background: rgba(255,107,107,0.2); color: var(--accent2); }
+  .badge-yellow { background: rgba(247,183,49,0.2); color: var(--accent4); }
+  .badge-blue { background: rgba(91,143,255,0.2); color: var(--accent); }
+  .badge-green { background: rgba(67,233,123,0.2); color: var(--accent3); }
+
+  /* REVIEW CARD */
+  .review-list { display: flex; flex-direction: column; gap: 8px; }
+
+  .review-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--card-radius);
+    padding: 16px 18px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    transition: all 0.2s;
+    animation: slideIn 0.3s ease;
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .review-card:hover { border-color: var(--accent); background: var(--surface2); }
+
+  .review-card.overdue { border-left: 3px solid var(--accent4); }
+  .review-card.today { border-left: 3px solid var(--accent2); }
+  .review-card.upcoming { border-left: 3px solid var(--accent); }
+  .review-card.completed-card { opacity: 0.4; border-left: 3px solid var(--accent3); }
+
+  .card-check {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    background: transparent;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.2s;
+    font-size: 16px;
+  }
+
+  .card-check:hover {
+    border-color: var(--accent3);
+    background: rgba(67,233,123,0.1);
+  }
+
+  .card-check.checked {
+    background: var(--accent3);
+    border-color: var(--accent3);
+    color: #0d0f14;
+  }
+
+  .card-body { flex: 1; min-width: 0; }
+
+  .card-title {
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .card-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .card-cat {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 100px;
+    background: rgba(91,143,255,0.15);
+    color: var(--accent);
+    letter-spacing: 0.5px;
+  }
+
+  .card-date-info {
+    font-size: 11px;
+    color: var(--text-sub);
+    font-family: var(--mono);
+  }
+
+  .level-dots {
+    display: flex;
+    gap: 3px;
+    align-items: center;
+  }
+
+  .level-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--border);
+  }
+
+  .level-dot.filled { background: var(--accent); }
+  .level-dot.filled:nth-child(1) { background: var(--accent2); }
+  .level-dot.filled:nth-child(2) { background: var(--accent4); }
+  .level-dot.filled:nth-child(3) { background: var(--accent); }
+  .level-dot.filled:nth-child(4) { background: #a78bfa; }
+  .level-dot.filled:nth-child(5) { background: var(--accent3); }
+  .level-dot.filled:nth-child(6) { background: var(--accent3); }
+
+  .card-actions {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  .btn-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-sub);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    transition: all 0.2s;
+  }
+
+  .btn-icon:hover { background: var(--surface2); color: var(--text); }
+  .btn-icon.del:hover { background: rgba(255,107,107,0.15); border-color: var(--accent2); color: var(--accent2); }
+
+  /* DATE PILL */
+  .date-pill {
+    font-size: 11px;
+    font-family: var(--mono);
+    padding: 3px 9px;
+    border-radius: 100px;
+    font-weight: 500;
+  }
+
+  .date-pill.overdue { background: rgba(247,183,49,0.15); color: var(--accent4); }
+  .date-pill.today { background: rgba(255,107,107,0.15); color: var(--accent2); }
+  .date-pill.soon { background: rgba(91,143,255,0.15); color: var(--accent); }
+  .date-pill.future { background: rgba(255,255,255,0.05); color: var(--text-dim); }
+
+  /* EMPTY STATE */
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-dim);
+  }
+
+  .empty-icon { font-size: 48px; margin-bottom: 14px; }
+  .empty-title { font-size: 16px; font-weight: 700; margin-bottom: 6px; color: var(--text-sub); }
+  .empty-desc { font-size: 13px; line-height: 1.7; }
+
+  /* FORGETTING CURVE VISUAL */
+  .curve-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--card-radius);
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+
+  .curve-card h3 {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-sub);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-family: var(--mono);
+    margin-bottom: 16px;
+  }
+
+  .curve-svg-wrap {
+    width: 100%;
+    overflow: visible;
+  }
+
+  /* SCHEDULE TIMELINE */
+  .schedule-line {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin-top: 16px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+
+  .sched-node {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex-shrink: 0;
+  }
+
+  .sched-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    background: var(--bg);
+    flex-shrink: 0;
+  }
+
+  .sched-dot.done { background: var(--accent3); border-color: var(--accent3); }
+  .sched-dot.current { background: var(--accent2); border-color: var(--accent2); box-shadow: 0 0 0 4px rgba(255,107,107,0.2); }
+  .sched-dot.future { background: var(--bg); border-color: var(--text-dim); }
+
+  .sched-label {
+    font-size: 9px;
+    color: var(--text-sub);
+    font-family: var(--mono);
+    margin-top: 5px;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  .sched-line-seg {
+    flex: 1;
+    height: 2px;
+    background: var(--border);
+    min-width: 20px;
+  }
+
+  .sched-line-seg.done { background: var(--accent3); }
+
+  /* ALL ITEMS LIST */
+  .filter-bar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+
+  .filter-chip {
+    padding: 6px 14px;
+    border-radius: 100px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-sub);
+    font-family: var(--font);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .filter-chip.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+    font-weight: 700;
+  }
+
+  .filter-chip:not(.active):hover {
+    background: var(--surface2);
+    color: var(--text);
+  }
+
+  /* MEMO TOOLTIP */
+  .memo-icon {
+    font-size: 13px;
+    cursor: default;
+    position: relative;
+  }
+
+  .memo-icon[title]:hover::after {
+    content: attr(title);
+    position: absolute;
+    bottom: 130%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: 12px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    white-space: nowrap;
+    z-index: 100;
+    max-width: 200px;
+    white-space: pre-wrap;
+  }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--surface2);
+    border: 1px solid var(--accent3);
+    color: var(--accent3);
+    font-size: 13px;
+    font-weight: 700;
+    padding: 12px 24px;
+    border-radius: 100px;
+    z-index: 1000;
+    transition: transform 0.3s ease;
+    white-space: nowrap;
+  }
+
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* DIVIDER */
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 24px 0;
+  }
+
+  /* MODAL */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 500;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+  }
+
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    width: 90%;
+    max-width: 440px;
+    animation: modalIn 0.25s ease;
+  }
+
+  @keyframes modalIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  .modal h3 {
+    font-size: 17px;
+    font-weight: 700;
+    margin-bottom: 16px;
+  }
+
+  .modal-item-title {
+    font-size: 20px;
+    font-weight: 900;
+    margin-bottom: 8px;
+  }
+
+  .modal-meta {
+    color: var(--text-sub);
+    font-size: 13px;
+    margin-bottom: 20px;
+    line-height: 1.7;
+  }
+
+  .modal-schedule {
+    background: var(--bg);
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 20px;
+  }
+
+  .modal-schedule-title {
+    font-size: 11px;
+    color: var(--text-sub);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-family: var(--mono);
+    font-weight: 700;
+    margin-bottom: 12px;
+  }
+
+  .schedule-step {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
+
+  .schedule-step:last-child { border-bottom: none; }
+
+  .step-icon { font-size: 14px; width: 20px; text-align: center; }
+
+  .step-label { flex: 1; color: var(--text-sub); }
+  .step-date { font-family: var(--mono); font-size: 12px; color: var(--text); }
+  .step-status { font-size: 12px; }
+
+  .modal-actions { display: flex; gap: 10px; }
+
+  .btn-modal {
+    flex: 1;
+    padding: 11px;
+    border-radius: 9px;
+    border: none;
+    font-family: var(--font);
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+
+  .btn-modal:hover { opacity: 0.85; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .btn-danger { background: rgba(255,107,107,0.15); color: var(--accent2); border: 1px solid rgba(255,107,107,0.3); }
+
+  /* Search */
+  .search-wrap {
+    position: relative;
+    margin-bottom: 16px;
+  }
+
+  .search-wrap input {
+    padding-left: 38px;
+  }
+
+  .search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-dim);
+    font-size: 16px;
+    pointer-events: none;
+  }
+
+  @media (max-width: 600px) {
+    .stats-bar { grid-template-columns: repeat(2, 1fr); }
+    .form-row { grid-template-columns: 1fr; }
+    .tab-btn { font-size: 12px; padding: 8px 6px; }
+  }
+</style>
+</head>
+<body>
+<div class="app-wrap">
+
+  <header>
+    <div class="logo">
+      <span class="logo-text">ReMemory</span>
+      <span class="logo-sub">忘却曲線 復習管理</span>
+    </div>
+    <div class="header-date" id="headerDate">—</div>
+  </header>
+
+  <!-- Stats -->
+  <div class="stats-bar">
+    <div class="stat-card stat-today">
+      <div class="stat-num" id="statToday">0</div>
+      <div class="stat-label">今日の復習</div>
+    </div>
+    <div class="stat-card stat-overdue">
+      <div class="stat-num" id="statOverdue">0</div>
+      <div class="stat-label">期限超過</div>
+    </div>
+    <div class="stat-card stat-total">
+      <div class="stat-num" id="statTotal">0</div>
+      <div class="stat-label">登録総数</div>
+    </div>
+    <div class="stat-card stat-done">
+      <div class="stat-num" id="statDone">0</div>
+      <div class="stat-label">完了レベル5+</div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('today')">📋 今日やること</button>
+    <button class="tab-btn" onclick="switchTab('add')">➕ 新規登録</button>
+    <button class="tab-btn" onclick="switchTab('all')">📚 全一覧</button>
+    <button class="tab-btn" onclick="switchTab('curve')">📈 学習ガイド</button>
+  </div>
+
+  <!-- TODAY PANEL -->
+  <div class="panel active" id="panel-today">
+    <div id="todayContent"></div>
+  </div>
+
+  <!-- ADD PANEL -->
+  <div class="panel" id="panel-add">
+    <div class="add-form-card">
+      <h2>📝 学習内容を登録する</h2>
+      <div class="form-row single">
+        <div>
+          <label>学習内容 *</label>
+          <input type="text" id="inputTitle" placeholder="例：簿記 仕訳の基本、英単語 Unit 5..." maxlength="80">
+        </div>
+      </div>
+      <div class="form-row">
+        <div>
+          <label>カテゴリ（任意）</label>
+          <select id="inputCategory">
+            <option value="">— カテゴリなし —</option>
+            <option>簿記</option>
+            <option>情報処理</option>
+            <option>英単語</option>
+            <option>英文法</option>
+            <option>数学</option>
+            <option>プログラミング</option>
+            <option>ギター</option>
+            <option>歴史</option>
+            <option>資格全般</option>
+            <option>その他</option>
+          </select>
+        </div>
+        <div>
+          <label>メモ（任意）</label>
+          <input type="text" id="inputMemo" placeholder="補足メモ..." maxlength="120">
+        </div>
+      </div>
+      <button class="btn-add" onclick="addItem()">＋ 登録して復習スケジュールを生成</button>
+    </div>
+
+    <!-- Preview -->
+    <div class="curve-card">
+      <h3>🗓 自動生成される復習スケジュール</h3>
+      <div class="schedule-line" id="previewSchedule"></div>
+      <p style="font-size:12px;color:var(--text-sub);margin-top:12px;">登録日から 1日・3日・7日・14日・30日・60日後 に自動でリマインドされます。</p>
+    </div>
+  </div>
+
+  <!-- ALL PANEL -->
+  <div class="panel" id="panel-all">
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="searchInput" placeholder="学習内容・カテゴリで検索..." oninput="renderAll()">
+    </div>
+    <div class="filter-bar" id="filterBar"></div>
+    <div id="allContent"></div>
+  </div>
+
+  <!-- CURVE PANEL -->
+  <div class="panel" id="panel-curve">
+    <div class="curve-card">
+      <h3>📈 エビングハウスの忘却曲線とは</h3>
+      <svg viewBox="0 0 600 200" class="curve-svg-wrap" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="curveGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#5b8fff" stop-opacity="0.4"/>
+            <stop offset="100%" stop-color="#5b8fff" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        <!-- Axes -->
+        <line x1="50" y1="20" x2="50" y2="175" stroke="#252a38" stroke-width="1.5"/>
+        <line x1="50" y1="175" x2="590" y2="175" stroke="#252a38" stroke-width="1.5"/>
+        <!-- Y labels -->
+        <text x="38" y="24" fill="#7a8099" font-size="10" text-anchor="end" font-family="monospace">100%</text>
+        <text x="38" y="80" fill="#7a8099" font-size="10" text-anchor="end" font-family="monospace">60%</text>
+        <text x="38" y="130" fill="#7a8099" font-size="10" text-anchor="end" font-family="monospace">30%</text>
+        <!-- Forgetting curve area -->
+        <path d="M50,22 C90,22 120,65 160,100 C200,130 240,145 280,152 C320,158 360,162 400,164 C440,166 480,167 560,168 L560,175 L50,175 Z"
+              fill="url(#curveGrad)"/>
+        <!-- Forgetting curve line -->
+        <path d="M50,22 C90,22 120,65 160,100 C200,130 240,145 280,152 C320,158 360,162 400,164 C440,166 480,167 560,168"
+              fill="none" stroke="#5b8fff" stroke-width="2.5" stroke-linecap="round"/>
+        <!-- Review spikes -->
+        <g>
+          <!-- Day 1 -->
+          <line x1="130" y1="85" x2="130" y2="30" stroke="#ff6b6b" stroke-width="1.5" stroke-dasharray="4,3"/>
+          <path d="M130,30 C135,30 165,30 165,30 C165,30 175,40 170,50 C165,60 155,65 145,62 C130,58 120,42 130,30Z"
+                fill="rgba(255,107,107,0.15)" stroke="#ff6b6b" stroke-width="1"/>
+          <text x="148" y="48" fill="#ff6b6b" font-size="9" text-anchor="middle" font-family="monospace">+1日</text>
+          <!-- Day 3 -->
+          <line x1="200" y1="128" x2="200" y2="55" stroke="#f7b731" stroke-width="1.5" stroke-dasharray="4,3"/>
+          <path d="M200,55 C205,55 235,55 235,55 C235,55 245,65 240,75 C235,85 225,88 215,85 C200,82 192,68 200,55Z"
+                fill="rgba(247,183,49,0.15)" stroke="#f7b731" stroke-width="1"/>
+          <text x="218" y="73" fill="#f7b731" font-size="9" text-anchor="middle" font-family="monospace">+3日</text>
+          <!-- Day 7 -->
+          <line x1="290" y1="151" x2="290" y2="78" stroke="#5b8fff" stroke-width="1.5" stroke-dasharray="4,3"/>
+          <path d="M290,78 C295,78 325,78 325,78 C325,78 335,88 330,98 C325,108 315,110 305,107 C290,104 282,90 290,78Z"
+                fill="rgba(91,143,255,0.15)" stroke="#5b8fff" stroke-width="1"/>
+          <text x="308" y="96" fill="#5b8fff" font-size="9" text-anchor="middle" font-family="monospace">+7日</text>
+          <!-- Day 14 -->
+          <line x1="380" y1="162" x2="380" y2="100" stroke="#a78bfa" stroke-width="1.5" stroke-dasharray="4,3"/>
+          <path d="M380,100 C385,100 415,100 415,100 C415,100 423,110 418,120 C413,130 403,132 393,129 C380,125 373,112 380,100Z"
+                fill="rgba(167,139,250,0.15)" stroke="#a78bfa" stroke-width="1"/>
+          <text x="396" y="118" fill="#a78bfa" font-size="9" text-anchor="middle" font-family="monospace">+14日</text>
+          <!-- Day 30 -->
+          <line x1="470" y1="165" x2="470" y2="118" stroke="#43e97b" stroke-width="1.5" stroke-dasharray="4,3"/>
+          <path d="M470,118 C475,118 505,118 505,118 C505,118 513,128 508,138 C503,148 493,149 483,146 C470,142 463,130 470,118Z"
+                fill="rgba(67,233,123,0.15)" stroke="#43e97b" stroke-width="1"/>
+          <text x="487" y="136" fill="#43e97b" font-size="9" text-anchor="middle" font-family="monospace">+30日</text>
+          <!-- Day 60 -->
+          <line x1="545" y1="167" x2="545" y2="140" stroke="#43e97b" stroke-width="1" stroke-dasharray="3,3"/>
+          <text x="545" y="135" fill="#43e97b" font-size="9" text-anchor="middle" font-family="monospace">+60日</text>
+        </g>
+        <!-- X labels -->
+        <text x="50" y="188" fill="#7a8099" font-size="9" text-anchor="middle" font-family="monospace">0</text>
+        <text x="130" y="188" fill="#7a8099" font-size="9" text-anchor="middle" font-family="monospace">1日</text>
+        <text x="200" y="188" fill="#7a8099" font-size="9" text-anchor="middle" font-family="monospace">3日</text>
+        <text x="290" y="188" fill="#7a8099" font-size="9" text-anchor="middle" font-family="monospace">7日</text>
+        <text x="380" y="188" fill="#7a8099" font-size="9" text-anchor="middle" font-family="monospace">14日</text>
+        <text x="470" y="188" fill="#7a8099" font-size="9" text-anchor="middle" font-family="monospace">30日</text>
+        <text x="545" y="188" fill="#7a8099" font-size="9" text-anchor="middle" font-family="monospace">60日</text>
+      </svg>
+    </div>
+
+    <div class="curve-card">
+      <h3>📋 復習スケジュールの意味</h3>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:8px;">
+        <div style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--bg);border-radius:10px;">
+          <div style="width:36px;height:36px;border-radius:50%;background:rgba(255,107,107,0.2);display:flex;align-items:center;justify-content:center;font-weight:900;color:var(--accent2);font-size:13px;flex-shrink:0;">L1</div>
+          <div><div style="font-weight:700;font-size:14px;margin-bottom:2px;">1日後</div><div style="font-size:12px;color:var(--text-sub);">学習直後。最初の定着確認。記憶が一番鮮明なうちに復習。</div></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--bg);border-radius:10px;">
+          <div style="width:36px;height:36px;border-radius:50%;background:rgba(247,183,49,0.2);display:flex;align-items:center;justify-content:center;font-weight:900;color:var(--accent4);font-size:13px;flex-shrink:0;">L2</div>
+          <div><div style="font-weight:700;font-size:14px;margin-bottom:2px;">3日後</div><div style="font-size:12px;color:var(--text-sub);">短期記憶を中期記憶へ。最初のヤマ場。忘れかけたころに復習。</div></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--bg);border-radius:10px;">
+          <div style="width:36px;height:36px;border-radius:50%;background:rgba(91,143,255,0.2);display:flex;align-items:center;justify-content:center;font-weight:900;color:var(--accent);font-size:13px;flex-shrink:0;">L3</div>
+          <div><div style="font-weight:700;font-size:14px;margin-bottom:2px;">7日後</div><div style="font-size:12px;color:var(--text-sub);">1週間後。中期記憶の強化。定着度が一段と上がる重要な復習。</div></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--bg);border-radius:10px;">
+          <div style="width:36px;height:36px;border-radius:50%;background:rgba(167,139,250,0.2);display:flex;align-items:center;justify-content:center;font-weight:900;color:#a78bfa;font-size:13px;flex-shrink:0;">L4</div>
+          <div><div style="font-weight:700;font-size:14px;margin-bottom:2px;">14日後</div><div style="font-size:12px;color:var(--text-sub);">2週間後。長期記憶への移行を促す。ここまでくれば実力が定着。</div></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--bg);border-radius:10px;">
+          <div style="width:36px;height:36px;border-radius:50%;background:rgba(67,233,123,0.2);display:flex;align-items:center;justify-content:center;font-weight:900;color:var(--accent3);font-size:13px;flex-shrink:0;">L5</div>
+          <div><div style="font-weight:700;font-size:14px;margin-bottom:2px;">30日後</div><div style="font-size:12px;color:var(--text-sub);">1ヶ月後。長期記憶の定着確認。試験本番への仕上げ。</div></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--bg);border-radius:10px;">
+          <div style="width:36px;height:36px;border-radius:50%;background:rgba(67,233,123,0.15);display:flex;align-items:center;justify-content:center;font-weight:900;color:var(--accent3);font-size:13px;flex-shrink:0;">L6</div>
+          <div><div style="font-weight:700;font-size:14px;margin-bottom:2px;">60日後</div><div style="font-size:12px;color:var(--text-sub);">2ヶ月後。完全定着の最終確認。ここを越えれば「身についた」と言える。</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /app-wrap -->
+
+<!-- Modal -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" id="modal">
+    <div id="modalContent"></div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ==================== DATA ====================
+const REVIEW_DAYS = [1, 3, 7, 14, 30, 60];
+const STORAGE_KEY = 'rememory_items_v2';
+
+function loadItems() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+  catch { return []; }
+}
+
+function saveItems(items) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+}
+
+function today() {
+  return new Date().toISOString().split('T')[0];
+}
+
+function addDays(dateStr, n) {
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate() + n);
+  return d.toISOString().split('T')[0];
+}
+
+function daysDiff(a, b) {
+  const da = new Date(a + 'T00:00:00');
+  const db = new Date(b + 'T00:00:00');
+  return Math.round((db - da) / 86400000);
+}
+
+function formatDate(d) {
+  const [y, m, day] = d.split('-');
+  return `${m}/${day}`;
+}
+
+// ==================== CRUD ====================
+function addItem() {
+  const title = document.getElementById('inputTitle').value.trim();
+  if (!title) { showToast('❗ 学習内容を入力してください', true); return; }
+  const items = loadItems();
+  const td = today();
+  const item = {
+    id: Date.now(),
+    title,
+    category: document.getElementById('inputCategory').value,
+    memo: document.getElementById('inputMemo').value.trim(),
+    createdAt: td,
+    nextReview: addDays(td, REVIEW_DAYS[0]),
+    level: 0,
+    completed: false,
+    reviewHistory: []
+  };
+  items.unshift(item);
+  saveItems(items);
+  document.getElementById('inputTitle').value = '';
+  document.getElementById('inputMemo').value = '';
+  document.getElementById('inputCategory').value = '';
+  showToast('✅ 登録しました！復習スケジュールを生成しました');
+  updateStats();
+  renderToday();
+  renderAll();
+  switchTab('today');
+}
+
+function completeReview(id) {
+  const items = loadItems();
+  const idx = items.findIndex(i => i.id === id);
+  if (idx < 0) return;
+  const item = items[idx];
+  item.reviewHistory = item.reviewHistory || [];
+  item.reviewHistory.push({ date: today(), level: item.level });
+  item.level = (item.level || 0) + 1;
+  if (item.level >= REVIEW_DAYS.length) {
+    item.completed = true;
+    item.nextReview = null;
+  } else {
+    item.nextReview = addDays(today(), REVIEW_DAYS[item.level]);
+    item.completed = false;
+  }
+  items[idx] = item;
+  saveItems(items);
+  updateStats();
+  renderToday();
+  renderAll();
+  showToast(`✅ 復習完了！次回は ${item.nextReview ? formatDate(item.nextReview) + ' (' + REVIEW_DAYS[item.level-1] + '日後→' + REVIEW_DAYS[item.level] + '日後)' : '最終完了🎉'}`);
+}
+
+function deleteItem(id) {
+  closeModal();
+  const items = loadItems().filter(i => i.id !== id);
+  saveItems(items);
+  updateStats();
+  renderToday();
+  renderAll();
+  showToast('🗑 削除しました');
+}
+
+// ==================== RENDER ====================
+function updateStats() {
+  const items = loadItems();
+  const td = today();
+  let todayCount = 0, overdueCount = 0, doneCount = 0;
+  for (const item of items) {
+    if (item.completed) { doneCount++; continue; }
+    if (!item.nextReview) continue;
+    const diff = daysDiff(td, item.nextReview);
+    if (diff < 0) overdueCount++;
+    else if (diff === 0) todayCount++;
+  }
+  document.getElementById('statToday').textContent = todayCount;
+  document.getElementById('statOverdue').textContent = overdueCount;
+  document.getElementById('statTotal').textContent = items.length;
+  document.getElementById('statDone').textContent = doneCount;
+  // Header date
+  const now = new Date();
+  const days = ['日','月','火','水','木','金','土'];
+  document.getElementById('headerDate').textContent =
+    `${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')} (${days[now.getDay()]})`;
+}
+
+function renderToday() {
+  const items = loadItems();
+  const td = today();
+  const overdue = [], todayItems = [], upcoming = [], doneAll = [];
+
+  for (const item of items) {
+    if (item.completed) { doneAll.push(item); continue; }
+    if (!item.nextReview) continue;
+    const diff = daysDiff(td, item.nextReview);
+    if (diff < 0) overdue.push(item);
+    else if (diff === 0) todayItems.push(item);
+    else if (diff <= 3) upcoming.push(item);
+  }
+
+  let html = '';
+
+  if (overdue.length === 0 && todayItems.length === 0 && upcoming.length === 0 && doneAll.length === 0) {
+    html = `<div class="empty-state">
+      <div class="empty-icon">📭</div>
+      <div class="empty-title">まだ何も登録されていません</div>
+      <div class="empty-desc">「新規登録」タブから学習内容を追加してみましょう。<br>忘却曲線に基づいた復習日を自動で管理します。</div>
+    </div>`;
+    document.getElementById('todayContent').innerHTML = html;
+    return;
+  }
+
+  if (overdue.length > 0) {
+    html += `<div class="section-header"><div class="section-title">⚠️ 期限超過 <span class="badge badge-yellow">${overdue.length}</span></div></div>`;
+    html += `<div class="review-list">`;
+    for (const item of overdue) html += renderCard(item, 'overdue', td);
+    html += `</div><div class="divider"></div>`;
+  }
+
+  if (todayItems.length > 0) {
+    html += `<div class="section-header"><div class="section-title">🔥 今日やること <span class="badge badge-red">${todayItems.length}</span></div></div>`;
+    html += `<div class="review-list">`;
+    for (const item of todayItems) html += renderCard(item, 'today', td);
+    html += `</div><div class="divider"></div>`;
+  }
+
+  if (upcoming.length > 0) {
+    html += `<div class="section-header"><div class="section-title">📅 近日予定（3日以内）<span class="badge badge-blue">${upcoming.length}</span></div></div>`;
+    html += `<div class="review-list">`;
+    for (const item of upcoming) html += renderCard(item, 'upcoming', td);
+    html += `</div><div class="divider"></div>`;
+  }
+
+  if (doneAll.length > 0) {
+    html += `<div class="section-header"><div class="section-title">🏆 完全習得済み <span class="badge badge-green">${doneAll.length}</span></div></div>`;
+    html += `<div class="review-list">`;
+    for (const item of doneAll) html += renderCard(item, 'done', td);
+    html += `</div>`;
+  }
+
+  document.getElementById('todayContent').innerHTML = html;
+}
+
+function renderCard(item, type, td) {
+  const lvl = item.level || 0;
+  const maxLvl = REVIEW_DAYS.length;
+  let datePill = '';
+  let cardClass = '';
+
+  if (type === 'overdue') {
+    const d = Math.abs(daysDiff(td, item.nextReview));
+    datePill = `<span class="date-pill overdue">⚠ ${d}日超過</span>`;
+    cardClass = 'overdue';
+  } else if (type === 'today') {
+    datePill = `<span class="date-pill today">🔥 今日</span>`;
+    cardClass = 'today';
+  } else if (type === 'upcoming') {
+    const d = daysDiff(td, item.nextReview);
+    datePill = `<span class="date-pill soon">📅 ${d === 1 ? '明日' : d + '日後'} (${formatDate(item.nextReview)})</span>`;
+    cardClass = 'upcoming';
+  } else if (type === 'done') {
+    datePill = `<span class="date-pill future">✅ 習得完了</span>`;
+    cardClass = 'completed-card';
+  }
+
+  const canComplete = type === 'today' || type === 'overdue';
+  const checkClass = type === 'done' ? 'checked' : '';
+  const checkIcon = type === 'done' ? '✓' : '';
+
+  const dots = Array.from({length: maxLvl}, (_, i) =>
+    `<div class="level-dot ${i < lvl ? 'filled' : ''}"></div>`
+  ).join('');
+
+  const catBadge = item.category ? `<span class="card-cat">${item.category}</span>` : '';
+  const memoIcon = item.memo ? `<span class="memo-icon" title="${item.memo}">💬</span>` : '';
+
+  return `<div class="review-card ${cardClass}">
+    <button class="card-check ${checkClass}" onclick="${canComplete ? `completeReview(${item.id})` : ''}" ${!canComplete ? 'style="cursor:default"' : ''}>${checkIcon}</button>
+    <div class="card-body">
+      <div class="card-title">${escHtml(item.title)}</div>
+      <div class="card-meta">
+        ${catBadge}
+        ${datePill}
+        <div class="level-dots" title="復習レベル ${lvl}/${maxLvl}">${dots}</div>
+        <span class="card-date-info">登録:${formatDate(item.createdAt)}</span>
+        ${memoIcon}
+      </div>
+    </div>
+    <div class="card-actions">
+      <button class="btn-icon" onclick="openModal(${item.id})" title="詳細">📋</button>
+      <button class="btn-icon del" onclick="openDeleteConfirm(${item.id})" title="削除">🗑</button>
+    </div>
+  </div>`;
+}
+
+function renderAll() {
+  const items = loadItems();
+  const query = (document.getElementById('searchInput')?.value || '').toLowerCase();
+  const activeFilter = document.querySelector('.filter-chip.active')?.dataset.cat || '';
+
+  // Build category filters
+  const cats = [...new Set(items.map(i => i.category).filter(Boolean))];
+  let filterHtml = `<button class="filter-chip ${!activeFilter ? 'active' : ''}" data-cat="" onclick="setFilter('')">すべて</button>`;
+  for (const c of cats) {
+    filterHtml += `<button class="filter-chip ${activeFilter === c ? 'active' : ''}" data-cat="${c}" onclick="setFilter('${c}')">${c}</button>`;
+  }
+  document.getElementById('filterBar').innerHTML = filterHtml;
+
+  const filtered = items.filter(item => {
+    const matchQ = !query || item.title.toLowerCase().includes(query) || (item.category || '').toLowerCase().includes(query);
+    const matchC = !activeFilter || item.category === activeFilter;
+    return matchQ && matchC;
+  });
+
+  if (filtered.length === 0) {
+    document.getElementById('allContent').innerHTML = `<div class="empty-state"><div class="empty-icon">🔍</div><div class="empty-title">該当なし</div></div>`;
+    return;
+  }
+
+  const td = today();
+  let html = `<div class="review-list">`;
+  for (const item of filtered) {
+    let type = 'upcoming';
+    if (item.completed) type = 'done';
+    else if (item.nextReview) {
+      const diff = daysDiff(td, item.nextReview);
+      if (diff < 0) type = 'overdue';
+      else if (diff === 0) type = 'today';
+    }
+    html += renderCard(item, type, td);
+  }
+  html += `</div>`;
+  document.getElementById('allContent').innerHTML = html;
+}
+
+let _activeFilter = '';
+function setFilter(cat) {
+  _activeFilter = cat;
+  // Update chips manually
+  document.querySelectorAll('.filter-chip').forEach(el => {
+    el.classList.toggle('active', el.dataset.cat === cat);
+  });
+  renderAll();
+}
+
+// ==================== MODAL ====================
+function openModal(id) {
+  const items = loadItems();
+  const item = items.find(i => i.id === id);
+  if (!item) return;
+
+  const lvl = item.level || 0;
+  const steps = REVIEW_DAYS.map((d, i) => {
+    const reviewDate = addDays(item.createdAt, REVIEW_DAYS.slice(0, i).reduce((a, b) => a + b, i === 0 ? 0 : 0));
+    // Calculate actual date: createdAt + cumulative days
+    const actualDate = (() => {
+      if (i === 0) return addDays(item.createdAt, d);
+      let base = item.createdAt;
+      for (let j = 0; j < i; j++) base = addDays(base, REVIEW_DAYS[j]);
+      return addDays(base, REVIEW_DAYS[i]);
+    })();
+    // Simpler: just add REVIEW_DAYS[i] from createdAt
+    const stepDate = addDays(item.createdAt, REVIEW_DAYS[i]);
+    let icon = '⬜', status = '';
+    if (i < lvl) { icon = '✅'; status = '<span style="color:var(--accent3);font-size:11px;">完了</span>'; }
+    else if (i === lvl && !item.completed) { icon = '🔥'; status = '<span style="color:var(--accent2);font-size:11px;">次回</span>'; }
+    else { icon = '🔵'; }
+    return `<div class="schedule-step">
+      <span class="step-icon">${icon}</span>
+      <span class="step-label">Level ${i+1}：${d}日後</span>
+      <span class="step-date">${formatDate(stepDate)}</span>
+      ${status}
+    </div>`;
+  }).join('');
+
+  const catBadge = item.category ? `<span class="card-cat">${item.category}</span>` : '';
+  const canDo = !item.completed && item.nextReview && daysDiff(today(), item.nextReview) <= 0;
+
+  const html = `
+    <h3>📋 学習アイテム詳細</h3>
+    <div class="modal-item-title">${escHtml(item.title)}</div>
+    <div class="modal-meta">
+      ${catBadge ? catBadge + '&ensp;' : ''}
+      登録日：${item.createdAt}${item.memo ? '<br>📝 ' + escHtml(item.memo) : ''}
+    </div>
+    <div class="modal-schedule">
+      <div class="modal-schedule-title">復習スケジュール（登録日基準）</div>
+      ${steps}
+    </div>
+    <div class="modal-actions">
+      ${canDo ? `<button class="btn-modal btn-primary" onclick="completeReview(${item.id});closeModal()">✅ 復習完了にする</button>` : ''}
+      <button class="btn-modal btn-danger" onclick="openDeleteConfirm(${item.id})">🗑 削除</button>
+      <button class="btn-modal btn-secondary" onclick="closeModal()">閉じる</button>
+    </div>
+  `;
+  document.getElementById('modalContent').innerHTML = html;
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function openDeleteConfirm(id) {
+  const items = loadItems();
+  const item = items.find(i => i.id === id);
+  if (!item) return;
+  const html = `
+    <h3>🗑 本当に削除しますか？</h3>
+    <p style="color:var(--text-sub);font-size:14px;margin-bottom:20px;">「${escHtml(item.title)}」を削除します。この操作は元に戻せません。</p>
+    <div class="modal-actions">
+      <button class="btn-modal btn-danger" onclick="deleteItem(${item.id})">削除する</button>
+      <button class="btn-modal btn-secondary" onclick="closeModal()">キャンセル</button>
+    </div>
+  `;
+  document.getElementById('modalContent').innerHTML = html;
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+}
+
+document.getElementById('modalOverlay').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+
+// ==================== TABS ====================
+function switchTab(name) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  const idx = ['today','add','all','curve'].indexOf(name);
+  document.querySelectorAll('.tab-btn')[idx]?.classList.add('active');
+  if (name === 'all') renderAll();
+}
+
+// ==================== PREVIEW SCHEDULE ====================
+function renderPreviewSchedule() {
+  const td = today();
+  const nodes = [];
+  nodes.push(`<div class="sched-node"><div class="sched-dot done"></div><div class="sched-label">今日<br>${formatDate(td)}</div></div>`);
+  for (let i = 0; i < REVIEW_DAYS.length; i++) {
+    const d = REVIEW_DAYS[i];
+    const date = addDays(td, d);
+    nodes.push(`<div class="sched-line-seg"></div>`);
+    nodes.push(`<div class="sched-node"><div class="sched-dot future"></div><div class="sched-label">+${d}日<br>${formatDate(date)}</div></div>`);
+  }
+  document.getElementById('previewSchedule').innerHTML = nodes.join('');
+}
+
+// ==================== TOAST ====================
+function showToast(msg, isError) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.borderColor = isError ? 'var(--accent2)' : 'var(--accent3)';
+  t.style.color = isError ? 'var(--accent2)' : 'var(--accent3)';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ==================== UTILS ====================
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ==================== INIT ====================
+updateStats();
+renderToday();
+renderPreviewSchedule();
+</script>
+</body>
+</html>
