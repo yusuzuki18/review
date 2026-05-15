@@ -1,0 +1,1161 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ReMemory — 忘却曲線復習管理</title>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0d0f14;
+  --surface: #13161e;
+  --surface2: #1a1e2a;
+  --border: #252a38;
+  --accent: #5b8fff;
+  --accent2: #ff6b6b;
+  --accent3: #43e97b;
+  --accent4: #f7b731;
+  --text: #e8eaf0;
+  --text-sub: #7a8099;
+  --text-dim: #454a60;
+  --card-radius: 14px;
+  --font: 'Zen Kaku Gothic New', sans-serif;
+  --mono: 'DM Mono', monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: var(--font); min-height: 100vh; overflow-x: hidden; }
+body::before {
+  content: ''; position: fixed; inset: 0;
+  background-image: linear-gradient(rgba(91,143,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(91,143,255,0.04) 1px, transparent 1px);
+  background-size: 40px 40px; pointer-events: none; z-index: 0;
+}
+.app-wrap { position: relative; z-index: 1; max-width: 900px; margin: 0 auto; padding: 0 16px 80px; }
+
+/* HEADER */
+header { display: flex; align-items: center; justify-content: space-between; padding: 24px 0 18px; border-bottom: 1px solid var(--border); margin-bottom: 20px; gap: 12px; flex-wrap: wrap; }
+.logo { display: flex; align-items: baseline; gap: 10px; }
+.logo-text { font-size: 26px; font-weight: 900; letter-spacing: -0.5px; background: linear-gradient(135deg, var(--accent), #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.logo-sub { font-size: 11px; color: var(--text-sub); font-family: var(--mono); letter-spacing: 1.5px; text-transform: uppercase; }
+.header-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.header-date { font-family: var(--mono); font-size: 13px; color: var(--text-sub); background: var(--surface); border: 1px solid var(--border); padding: 6px 14px; border-radius: 100px; }
+.notif-toggle { padding: 6px 12px; border-radius: 100px; border: 1px solid var(--border); background: var(--surface); color: var(--text-sub); font-family: var(--font); font-size: 12px; cursor: pointer; transition: all 0.2s; }
+.notif-toggle.on { border-color: var(--accent3); color: var(--accent3); background: rgba(67,233,123,0.08); }
+
+/* COUNTDOWN BANNER */
+.countdown-bar { margin-bottom: 20px; display: flex; flex-direction: column; gap: 8px; }
+.countdown-card {
+  background: linear-gradient(135deg, rgba(91,143,255,0.10), rgba(167,139,250,0.10));
+  border: 1px solid rgba(91,143,255,0.25); border-radius: var(--card-radius);
+  padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+  animation: slideIn 0.3s ease;
+}
+.countdown-card.urgent { border-color: rgba(255,107,107,0.4); background: linear-gradient(135deg, rgba(255,107,107,0.10), rgba(247,183,49,0.08)); }
+.countdown-card.soon { border-color: rgba(247,183,49,0.4); background: linear-gradient(135deg, rgba(247,183,49,0.10), rgba(91,143,255,0.06)); }
+.countdown-left { display: flex; align-items: center; gap: 10px; }
+.countdown-icon { font-size: 24px; }
+.countdown-label { font-size: 10px; color: var(--text-sub); letter-spacing: 1px; text-transform: uppercase; font-family: var(--mono); margin-bottom: 1px; }
+.countdown-name { font-size: 15px; font-weight: 700; }
+.countdown-date-sub { font-size: 11px; color: var(--text-sub); font-family: var(--mono); margin-top: 1px; }
+.countdown-days { font-family: var(--mono); font-size: 26px; font-weight: 900; color: var(--accent); white-space: nowrap; }
+.countdown-days span { font-size: 12px; color: var(--text-sub); font-weight: 400; margin-left: 3px; }
+.countdown-card.urgent .countdown-days { color: var(--accent2); }
+.countdown-card.soon .countdown-days { color: var(--accent4); }
+.countdown-actions { display: flex; gap: 6px; align-items: center; }
+.btn-countdown-del { width: 28px; height: 28px; border-radius: 7px; border: 1px solid var(--border); background: transparent; color: var(--text-dim); font-size: 13px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+.btn-countdown-del:hover { background: rgba(255,107,107,0.15); border-color: var(--accent2); color: var(--accent2); }
+.countdown-add-btn { width: 100%; padding: 11px; border: 1px dashed var(--border); border-radius: var(--card-radius); background: transparent; color: var(--text-dim); font-family: var(--font); font-size: 13px; cursor: pointer; transition: all 0.2s; }
+.countdown-add-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(91,143,255,0.05); }
+/* Exam list in settings */
+.exam-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+.exam-item { display: flex; align-items: center; justify-content: space-between; background: var(--bg); border-radius: 9px; padding: 10px 14px; gap: 10px; }
+.exam-item-left { display: flex; align-items: center; gap: 10px; }
+.exam-item-icon { font-size: 18px; }
+.exam-item-name { font-size: 14px; font-weight: 700; }
+.exam-item-date { font-size: 11px; color: var(--text-sub); font-family: var(--mono); margin-top: 2px; }
+.exam-item-days { font-family: var(--mono); font-size: 15px; font-weight: 700; color: var(--accent); white-space: nowrap; margin-right: 8px; }
+
+/* STATS BAR */
+.stats-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
+.stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--card-radius); padding: 14px; text-align: center; transition: border-color 0.2s; }
+.stat-card:hover { border-color: var(--accent); }
+.stat-num { font-size: 26px; font-weight: 900; font-family: var(--mono); line-height: 1; margin-bottom: 4px; }
+.stat-label { font-size: 11px; color: var(--text-sub); letter-spacing: 0.5px; }
+.stat-today .stat-num { color: var(--accent2); }
+.stat-overdue .stat-num { color: var(--accent4); }
+.stat-total .stat-num { color: var(--accent); }
+.stat-done .stat-num { color: var(--accent3); }
+
+/* TABS */
+.tabs { display: flex; gap: 4px; margin-bottom: 24px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 4px; overflow-x: auto; }
+.tab-btn { flex: 1; padding: 9px 10px; border: none; border-radius: 7px; background: transparent; color: var(--text-sub); font-family: var(--font); font-size: 12px; font-weight: 500; cursor: pointer; transition: all 0.2s; white-space: nowrap; min-width: 0; }
+.tab-btn.active { background: var(--accent); color: #fff; font-weight: 700; }
+.tab-btn:not(.active):hover { background: var(--surface2); color: var(--text); }
+
+/* PANEL */
+.panel { display: none; }
+.panel.active { display: block; }
+
+/* FORM */
+.add-form-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--card-radius); padding: 24px; margin-bottom: 24px; }
+.add-form-card h2 { font-size: 14px; font-weight: 700; margin-bottom: 18px; color: var(--text-sub); letter-spacing: 1px; text-transform: uppercase; font-family: var(--mono); }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+.form-row.single { grid-template-columns: 1fr; }
+.form-row.triple { grid-template-columns: 1fr 1fr 1fr; }
+label { display: block; font-size: 11px; font-weight: 700; color: var(--text-sub); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; }
+input[type="text"], input[type="date"], textarea, select {
+  width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+  color: var(--text); font-family: var(--font); font-size: 14px; padding: 10px 14px;
+  outline: none; transition: border-color 0.2s, box-shadow 0.2s; resize: none;
+}
+input[type="text"]:focus, input[type="date"]:focus, textarea:focus, select:focus {
+  border-color: var(--accent); box-shadow: 0 0 0 3px rgba(91,143,255,0.15);
+}
+input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.5); cursor: pointer; }
+select option { background: var(--surface2); }
+textarea { height: 60px; }
+.btn-add { width: 100%; padding: 13px; border: none; border-radius: 9px; background: linear-gradient(135deg, var(--accent), #a78bfa); color: #fff; font-family: var(--font); font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 8px; transition: opacity 0.2s, transform 0.1s; letter-spacing: 0.5px; }
+.btn-add:hover { opacity: 0.9; }
+.btn-add:active { transform: scale(0.99); }
+
+/* CATEGORY MANAGER */
+.cat-manager { background: var(--surface); border: 1px solid var(--border); border-radius: var(--card-radius); padding: 20px; margin-bottom: 20px; }
+.cat-manager h3 { font-size: 13px; font-weight: 700; color: var(--text-sub); letter-spacing: 1px; text-transform: uppercase; font-family: var(--mono); margin-bottom: 14px; }
+.cat-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; min-height: 32px; }
+.cat-tag { display: flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 100px; background: rgba(91,143,255,0.15); border: 1px solid rgba(91,143,255,0.3); color: var(--accent); font-size: 13px; font-weight: 700; }
+.cat-tag-del { background: none; border: none; color: var(--accent); cursor: pointer; font-size: 14px; line-height: 1; padding: 0; opacity: 0.7; transition: opacity 0.2s; }
+.cat-tag-del:hover { opacity: 1; color: var(--accent2); }
+.cat-add-row { display: flex; gap: 8px; }
+.cat-add-row input { flex: 1; }
+.btn-cat-add { padding: 10px 18px; border: none; border-radius: 8px; background: var(--accent); color: #fff; font-family: var(--font); font-size: 13px; font-weight: 700; cursor: pointer; transition: opacity 0.2s; white-space: nowrap; }
+.btn-cat-add:hover { opacity: 0.85; }
+
+/* SECTION HEADER */
+.section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.section-title { font-size: 13px; font-weight: 700; color: var(--text-sub); letter-spacing: 1.5px; text-transform: uppercase; font-family: var(--mono); display: flex; align-items: center; gap: 8px; }
+.badge { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; border-radius: 100px; font-size: 11px; font-weight: 700; padding: 0 6px; }
+.badge-red { background: rgba(255,107,107,0.2); color: var(--accent2); }
+.badge-yellow { background: rgba(247,183,49,0.2); color: var(--accent4); }
+.badge-blue { background: rgba(91,143,255,0.2); color: var(--accent); }
+.badge-green { background: rgba(67,233,123,0.2); color: var(--accent3); }
+
+/* REVIEW CARD */
+.review-list { display: flex; flex-direction: column; gap: 8px; }
+.review-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--card-radius); padding: 14px 16px; display: flex; align-items: center; gap: 12px; transition: all 0.2s; animation: slideIn 0.3s ease; }
+@keyframes slideIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+.review-card:hover { border-color: var(--accent); background: var(--surface2); }
+.review-card.overdue { border-left: 3px solid var(--accent4); }
+.review-card.today { border-left: 3px solid var(--accent2); }
+.review-card.upcoming { border-left: 3px solid var(--accent); }
+.review-card.completed-card { opacity: 0.45; border-left: 3px solid var(--accent3); }
+.card-check { width: 34px; height: 34px; border-radius: 50%; border: 2px solid var(--border); background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.2s; font-size: 15px; }
+.card-check:hover { border-color: var(--accent3); background: rgba(67,233,123,0.1); }
+.card-check.checked { background: var(--accent3); border-color: var(--accent3); color: #0d0f14; }
+.card-body { flex: 1; min-width: 0; }
+.card-title { font-size: 14px; font-weight: 700; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.card-cat { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 100px; background: rgba(91,143,255,0.15); color: var(--accent); }
+.card-date-info { font-size: 11px; color: var(--text-sub); font-family: var(--mono); }
+.level-dots { display: flex; gap: 3px; align-items: center; }
+.level-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--border); }
+.level-dot.filled:nth-child(1) { background: var(--accent2); }
+.level-dot.filled:nth-child(2) { background: var(--accent4); }
+.level-dot.filled:nth-child(3) { background: var(--accent); }
+.level-dot.filled:nth-child(4) { background: #a78bfa; }
+.level-dot.filled:nth-child(5) { background: var(--accent3); }
+.level-dot.filled:nth-child(6) { background: var(--accent3); }
+.level-dot.filled:nth-child(7) { background: #43e97b; }
+.level-dot.filled:nth-child(8) { background: #43e97b; }
+.level-dot.filled:nth-child(9) { background: #43e97b; }
+.card-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.btn-icon { width: 30px; height: 30px; border-radius: 7px; border: 1px solid var(--border); background: transparent; color: var(--text-sub); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 13px; transition: all 0.2s; }
+.btn-icon:hover { background: var(--surface2); color: var(--text); }
+.btn-icon.del:hover { background: rgba(255,107,107,0.15); border-color: var(--accent2); color: var(--accent2); }
+.date-pill { font-size: 11px; font-family: var(--mono); padding: 3px 9px; border-radius: 100px; font-weight: 500; }
+.date-pill.overdue { background: rgba(247,183,49,0.15); color: var(--accent4); }
+.date-pill.today { background: rgba(255,107,107,0.15); color: var(--accent2); }
+.date-pill.soon { background: rgba(91,143,255,0.15); color: var(--accent); }
+.date-pill.future { background: rgba(255,255,255,0.05); color: var(--text-dim); }
+
+/* EMPTY STATE */
+.empty-state { text-align: center; padding: 60px 20px; color: var(--text-dim); }
+.empty-icon { font-size: 48px; margin-bottom: 14px; }
+.empty-title { font-size: 16px; font-weight: 700; margin-bottom: 6px; color: var(--text-sub); }
+.empty-desc { font-size: 13px; line-height: 1.7; }
+
+/* CURVE CARD */
+.curve-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--card-radius); padding: 20px; margin-bottom: 20px; }
+.curve-card h3 { font-size: 13px; font-weight: 700; color: var(--text-sub); letter-spacing: 1px; text-transform: uppercase; font-family: var(--mono); margin-bottom: 16px; }
+
+/* SCHEDULE LINE */
+.schedule-line { display: flex; align-items: center; gap: 0; margin-top: 16px; overflow-x: auto; padding-bottom: 8px; }
+.sched-node { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; }
+.sched-dot { width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--border); background: var(--bg); flex-shrink: 0; }
+.sched-dot.done { background: var(--accent3); border-color: var(--accent3); }
+.sched-dot.current { background: var(--accent2); border-color: var(--accent2); box-shadow: 0 0 0 4px rgba(255,107,107,0.2); }
+.sched-dot.future { background: var(--bg); border-color: var(--text-dim); }
+.sched-label { font-size: 9px; color: var(--text-sub); font-family: var(--mono); margin-top: 5px; text-align: center; white-space: nowrap; }
+.sched-line-seg { flex: 1; height: 2px; background: var(--border); min-width: 16px; }
+.sched-line-seg.done { background: var(--accent3); }
+
+/* FILTER */
+.filter-bar { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+.filter-chip { padding: 6px 14px; border-radius: 100px; border: 1px solid var(--border); background: transparent; color: var(--text-sub); font-family: var(--font); font-size: 12px; cursor: pointer; transition: all 0.2s; }
+.filter-chip.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 700; }
+.filter-chip:not(.active):hover { background: var(--surface2); color: var(--text); }
+.search-wrap { position: relative; margin-bottom: 16px; }
+.search-wrap input { padding-left: 38px; }
+.search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-dim); font-size: 16px; pointer-events: none; }
+
+/* MODAL */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 500; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+.modal-overlay.open { display: flex; }
+.modal { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 28px; width: 92%; max-width: 460px; animation: modalIn 0.25s ease; max-height: 90vh; overflow-y: auto; }
+@keyframes modalIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+.modal h3 { font-size: 17px; font-weight: 700; margin-bottom: 16px; }
+.modal-item-title { font-size: 20px; font-weight: 900; margin-bottom: 8px; }
+.modal-meta { color: var(--text-sub); font-size: 13px; margin-bottom: 20px; line-height: 1.7; }
+.modal-schedule { background: var(--bg); border-radius: 10px; padding: 16px; margin-bottom: 20px; }
+.modal-schedule-title { font-size: 11px; color: var(--text-sub); letter-spacing: 1px; text-transform: uppercase; font-family: var(--mono); font-weight: 700; margin-bottom: 12px; }
+.schedule-step { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+.schedule-step:last-child { border-bottom: none; }
+.step-icon { font-size: 14px; width: 20px; text-align: center; }
+.step-label { flex: 1; color: var(--text-sub); }
+.step-date { font-family: var(--mono); font-size: 12px; color: var(--text); }
+.modal-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.btn-modal { flex: 1; padding: 11px; border-radius: 9px; border: none; font-family: var(--font); font-size: 14px; font-weight: 700; cursor: pointer; transition: opacity 0.2s; min-width: 100px; }
+.btn-modal:hover { opacity: 0.85; }
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border) !important; }
+.btn-danger { background: rgba(255,107,107,0.15); color: var(--accent2); border: 1px solid rgba(255,107,107,0.3) !important; }
+
+/* QUOTE MODAL */
+.quote-modal { text-align: center; }
+.quote-icon { font-size: 48px; margin-bottom: 16px; }
+.quote-text { font-size: 18px; font-weight: 700; line-height: 1.6; margin-bottom: 10px; color: var(--text); }
+.quote-author { font-size: 13px; color: var(--text-sub); margin-bottom: 24px; }
+.quote-progress { font-size: 11px; color: var(--text-dim); font-family: var(--mono); margin-bottom: 20px; }
+
+/* DIVIDER */
+.divider { height: 1px; background: var(--border); margin: 20px 0; }
+
+/* TOAST */
+.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--surface2); border: 1px solid var(--accent3); color: var(--accent3); font-size: 13px; font-weight: 700; padding: 12px 24px; border-radius: 100px; z-index: 1000; transition: transform 0.3s ease; white-space: nowrap; }
+.toast.show { transform: translateX(-50%) translateY(0); }
+
+/* SETTINGS PANEL */
+.settings-section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--card-radius); padding: 20px; margin-bottom: 16px; }
+.settings-section h3 { font-size: 13px; font-weight: 700; color: var(--text-sub); letter-spacing: 1px; text-transform: uppercase; font-family: var(--mono); margin-bottom: 16px; }
+.setting-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); gap: 12px; }
+.setting-row:last-child { border-bottom: none; }
+.setting-label { font-size: 14px; font-weight: 500; }
+.setting-desc { font-size: 12px; color: var(--text-sub); margin-top: 2px; }
+.toggle-switch { position: relative; width: 44px; height: 24px; flex-shrink: 0; }
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-slider { position: absolute; cursor: pointer; inset: 0; background: var(--border); border-radius: 24px; transition: 0.2s; }
+.toggle-slider:before { content: ''; position: absolute; height: 18px; width: 18px; left: 3px; bottom: 3px; background: var(--text-sub); border-radius: 50%; transition: 0.2s; }
+input:checked + .toggle-slider { background: var(--accent3); }
+input:checked + .toggle-slider:before { transform: translateX(20px); background: #fff; }
+
+/* COUNTDOWN FORM */
+.countdown-form { background: var(--bg); border-radius: 10px; padding: 16px; }
+.countdown-form .form-row { margin-bottom: 0; }
+
+@media (max-width: 600px) {
+  .stats-bar { grid-template-columns: repeat(2, 1fr); }
+  .form-row { grid-template-columns: 1fr; }
+  .form-row.triple { grid-template-columns: 1fr; }
+  .tab-btn { font-size: 11px; padding: 8px 6px; }
+  .countdown-card { flex-direction: column; align-items: flex-start; }
+}
+</style>
+</head>
+<body>
+<div class="app-wrap">
+
+<header>
+  <div class="logo">
+    <span class="logo-text">ReMemory</span>
+    <span class="logo-sub">忘却曲線 復習管理</span>
+  </div>
+  <div class="header-right">
+    <button class="notif-toggle" id="notifToggle" onclick="toggleNotification()">🔔 通知オフ</button>
+    <div class="header-date" id="headerDate">—</div>
+  </div>
+</header>
+
+<!-- COUNTDOWN -->
+<div class="countdown-bar" id="countdownBar"></div>
+
+<!-- STATS -->
+<div class="stats-bar">
+  <div class="stat-card stat-today"><div class="stat-num" id="statToday">0</div><div class="stat-label">今日の復習</div></div>
+  <div class="stat-card stat-overdue"><div class="stat-num" id="statOverdue">0</div><div class="stat-label">期限超過</div></div>
+  <div class="stat-card stat-total"><div class="stat-num" id="statTotal">0</div><div class="stat-label">登録総数</div></div>
+  <div class="stat-card stat-done"><div class="stat-num" id="statDone">0</div><div class="stat-label">完全習得</div></div>
+</div>
+
+<!-- TABS -->
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('today')">📋 今日</button>
+  <button class="tab-btn" onclick="switchTab('add')">➕ 登録</button>
+  <button class="tab-btn" onclick="switchTab('all')">📚 一覧</button>
+  <button class="tab-btn" onclick="switchTab('settings')">⚙️ 設定</button>
+  <button class="tab-btn" onclick="switchTab('curve')">📈 ガイド</button>
+</div>
+
+<!-- TODAY PANEL -->
+<div class="panel active" id="panel-today">
+  <div id="todayContent"></div>
+</div>
+
+<!-- ADD PANEL -->
+<div class="panel" id="panel-add">
+  <div class="add-form-card">
+    <h2>📝 学習内容を登録する</h2>
+    <div class="form-row single">
+      <div>
+        <label>学習内容 *</label>
+        <input type="text" id="inputTitle" placeholder="例：簿記 仕訳の基本、英単語 Unit 5..." maxlength="80">
+      </div>
+    </div>
+    <div class="form-row">
+      <div>
+        <label>カテゴリ（任意）</label>
+        <select id="inputCategory"><option value="">— カテゴリなし —</option></select>
+      </div>
+      <div>
+        <label>メモ（任意）</label>
+        <input type="text" id="inputMemo" placeholder="補足メモ..." maxlength="120">
+      </div>
+    </div>
+    <button class="btn-add" onclick="addItem()">＋ 登録して復習スケジュールを生成</button>
+  </div>
+  <div class="curve-card">
+    <h3>🗓 自動生成される復習スケジュール</h3>
+    <div class="schedule-line" id="previewSchedule"></div>
+    <p style="font-size:12px;color:var(--text-sub);margin-top:12px;">登録日から 1・3・7・14・30・60・90・180・365日後 に自動でリマインドされます。</p>
+  </div>
+</div>
+
+<!-- ALL PANEL -->
+<div class="panel" id="panel-all">
+  <div class="search-wrap">
+    <span class="search-icon">🔍</span>
+    <input type="text" id="searchInput" placeholder="学習内容・カテゴリで検索..." oninput="renderAll()">
+  </div>
+  <div class="filter-bar" id="filterBar"></div>
+  <div id="allContent"></div>
+</div>
+
+<!-- SETTINGS PANEL -->
+<div class="panel" id="panel-settings">
+  <!-- Category Manager -->
+  <div class="cat-manager">
+    <h3>🏷 カテゴリ管理</h3>
+    <div class="cat-tags" id="catTags"></div>
+    <div class="cat-add-row">
+      <input type="text" id="catInput" placeholder="新しいカテゴリ名..." maxlength="20" onkeydown="if(event.key==='Enter')addCategory()">
+      <button class="btn-cat-add" onclick="addCategory()">追加</button>
+    </div>
+  </div>
+
+  <!-- Notification Settings -->
+  <div class="settings-section">
+    <h3>🔔 通知設定</h3>
+    <div class="setting-row">
+      <div>
+        <div class="setting-label">プッシュ通知</div>
+        <div class="setting-desc">今日の復習タスクをブラウザ通知でお知らせ</div>
+      </div>
+      <label class="toggle-switch">
+        <input type="checkbox" id="notifCheck" onchange="saveNotifSetting()">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+    <div class="setting-row">
+      <div>
+        <div class="setting-label">通知テスト</div>
+        <div class="setting-desc">今すぐテスト通知を送信する</div>
+      </div>
+      <button class="btn-cat-add" onclick="sendTestNotif()" style="padding:8px 14px;font-size:12px;">テスト送信</button>
+    </div>
+  </div>
+
+  <!-- Countdown Settings -->
+  <div class="settings-section">
+    <h3>📅 検定日カウントダウン</h3>
+    <div class="exam-list" id="examList"></div>
+    <div style="background:var(--bg);border-radius:10px;padding:14px;">
+      <div style="font-size:11px;color:var(--text-sub);letter-spacing:1px;text-transform:uppercase;font-family:var(--mono);font-weight:700;margin-bottom:10px;">＋ 新しい検定日を追加</div>
+      <div class="form-row">
+        <div>
+          <label>検定・試験名</label>
+          <input type="text" id="examName" placeholder="例：日商簿記2級..." maxlength="30">
+        </div>
+        <div>
+          <label>試験日</label>
+          <input type="date" id="examDate">
+        </div>
+      </div>
+      <button class="btn-add" style="margin-top:4px;" onclick="saveCountdown()">＋ 追加する</button>
+    </div>
+  </div>
+
+  <!-- Data -->
+  <div class="settings-section">
+    <h3>💾 データ管理</h3>
+    <div class="setting-row">
+      <div><div class="setting-label">データエクスポート</div><div class="setting-desc">全データをJSONファイルとして保存</div></div>
+      <button class="btn-cat-add" onclick="exportData()" style="padding:8px 14px;font-size:12px;">書き出し</button>
+    </div>
+    <div class="setting-row">
+      <div><div class="setting-label">全データ削除</div><div class="setting-desc">登録した全タスクを削除します（元に戻せません）</div></div>
+      <button class="btn-modal btn-danger" style="flex:none;padding:8px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;" onclick="clearAllData()">全削除</button>
+    </div>
+  </div>
+</div>
+
+<!-- CURVE/GUIDE PANEL -->
+<div class="panel" id="panel-curve">
+  <div class="curve-card">
+    <h3>📈 エビングハウスの忘却曲線</h3>
+    <svg viewBox="0 0 600 200" style="width:100%;overflow:visible;" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="cg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#5b8fff" stop-opacity="0.35"/>
+          <stop offset="100%" stop-color="#5b8fff" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      <line x1="50" y1="20" x2="50" y2="175" stroke="#252a38" stroke-width="1.5"/>
+      <line x1="50" y1="175" x2="590" y2="175" stroke="#252a38" stroke-width="1.5"/>
+      <text x="38" y="24" fill="#7a8099" font-size="10" text-anchor="end" font-family="monospace">100%</text>
+      <text x="38" y="80" fill="#7a8099" font-size="10" text-anchor="end" font-family="monospace">60%</text>
+      <text x="38" y="130" fill="#7a8099" font-size="10" text-anchor="end" font-family="monospace">30%</text>
+      <path d="M50,22 C90,22 120,65 160,100 C200,130 240,145 280,152 C320,158 360,162 400,164 C440,166 480,167 560,168 L560,175 L50,175 Z" fill="url(#cg)"/>
+      <path d="M50,22 C90,22 120,65 160,100 C200,130 240,145 280,152 C320,158 360,162 400,164 C440,166 480,167 560,168" fill="none" stroke="#5b8fff" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="130" y1="85" x2="130" y2="32" stroke="#ff6b6b" stroke-width="1.5" stroke-dasharray="4,3"/>
+      <text x="130" y="28" fill="#ff6b6b" font-size="9" text-anchor="middle" font-family="monospace">1日</text>
+      <line x1="195" y1="128" x2="195" y2="56" stroke="#f7b731" stroke-width="1.5" stroke-dasharray="4,3"/>
+      <text x="195" y="52" fill="#f7b731" font-size="9" text-anchor="middle" font-family="monospace">3日</text>
+      <line x1="275" y1="151" x2="275" y2="78" stroke="#5b8fff" stroke-width="1.5" stroke-dasharray="4,3"/>
+      <text x="275" y="74" fill="#5b8fff" font-size="9" text-anchor="middle" font-family="monospace">7日</text>
+      <line x1="355" y1="161" x2="355" y2="100" stroke="#a78bfa" stroke-width="1.5" stroke-dasharray="4,3"/>
+      <text x="355" y="96" fill="#a78bfa" font-size="9" text-anchor="middle" font-family="monospace">14日</text>
+      <line x1="435" y1="164" x2="435" y2="118" stroke="#43e97b" stroke-width="1.5" stroke-dasharray="4,3"/>
+      <text x="435" y="114" fill="#43e97b" font-size="9" text-anchor="middle" font-family="monospace">30日</text>
+      <line x1="490" y1="166" x2="490" y2="135" stroke="#43e97b" stroke-width="1" stroke-dasharray="3,3"/>
+      <text x="490" y="131" fill="#43e97b" font-size="8" text-anchor="middle" font-family="monospace">60日</text>
+      <line x1="530" y1="167" x2="530" y2="148" stroke="#43e97b" stroke-width="1" stroke-dasharray="3,3"/>
+      <text x="530" y="144" fill="#43e97b" font-size="8" text-anchor="middle" font-family="monospace">90日〜</text>
+    </svg>
+  </div>
+  <div class="curve-card">
+    <h3>📋 復習スケジュールの意味</h3>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px;">
+      <div style="display:flex;align-items:center;gap:12px;padding:10px;background:var(--bg);border-radius:10px;"><div style="width:32px;height:32px;border-radius:50%;background:rgba(255,107,107,0.2);display:flex;align-items:center;justify-content:center;font-weight:900;color:var(--accent2);font-size:12px;flex-shrink:0;">L1</div><div><div style="font-weight:700;font-size:13px;margin-bottom:2px;">1日後</div><div style="font-size:12px;color:var(--text-sub);">学習直後の最初の確認。記憶が鮮明なうちに定着。</div></div></div>
+      <div style="display:flex;align-items:center;gap:12px;padding:10px;background:var(--bg);border-radius:10px;"><div style="width:32px;height:32px;border-radius:50%;background:rgba(247,183,49,0.2);display:flex;align-items:center;justify-content:center;font-weight:900;color:var(--accent4);font-size:12px;flex-shrink:0;">L2</div><div><div style="font-weight:700;font-size:13px;margin-bottom:2px;">3日後</div><div style="font-size:12px;color:var(--text-sub);">短期→中期記憶へ。忘れかけたころが復習のベストタイミング。</div></div></div>
+      <div style="display:flex;align-items:center;gap:12px;padding:10px;background:var(--bg);border-radius:10px;"><div style="width:32px;height:32px;border-radius:50%;background:rgba(91,143,255,0.2);display:flex;align-items:center;justify-content:center;font-weight:900;color:var(--accent);font-size:12px;flex-shrink:0;">L3</div><div><div style="font-weight:700;font-size:13px;margin-bottom:2px;">7日後（1週間）</div><div style="font-size:12px;color:var(--text-sub);">中期記憶の強化。定着度が一段上がる重要な復習。</div></div></div>
+      <div style="display:flex;align-items:center;gap:12px;padding:10px;background:var(--bg);border-radius:10px;"><div style="width:32px;height:32px;border-radius:50%;background:rgba(167,139,250,0.2);display:flex;align-items:center;justify-content:center;font-weight:900;color:#a78bfa;font-size:12px;flex-shrink:0;">L4</div><div><div style="font-weight:700;font-size:13px;margin-bottom:2px;">14日後（2週間）</div><div style="font-size:12px;color:var(--text-sub);">長期記憶への移行。ここまで来れば実力が確実に定着。</div></div></div>
+      <div style="display:flex;align-items:center;gap:12px;padding:10px;background:var(--bg);border-radius:10px;"><div style="width:32px;height:32px;border-radius:50%;background:rgba(67,233,123,0.2);display:flex;align-items:center;justify-content:center;font-weight:900;color:var(--accent3);font-size:12px;flex-shrink:0;">L5</div><div><div style="font-weight:700;font-size:13px;margin-bottom:2px;">30日後（1か月）</div><div style="font-size:12px;color:var(--text-sub);">長期記憶の定着確認。試験本番への仕上げに最適。</div></div></div>
+      <div style="display:flex;align-items:center;gap:12px;padding:10px;background:var(--bg);border-radius:10px;"><div style="width:32px;height:32px;border-radius:50%;background:rgba(67,233,123,0.15);display:flex;align-items:center;justify-content:center;font-weight:900;color:var(--accent3);font-size:12px;flex-shrink:0;">L6</div><div><div style="font-weight:700;font-size:13px;margin-bottom:2px;">60日後（2か月）</div><div style="font-size:12px;color:var(--text-sub);">完全定着の中間確認。記憶の持続力を高める。</div></div></div>
+      <div style="display:flex;align-items:center;gap:12px;padding:10px;background:var(--bg);border-radius:10px;"><div style="width:32px;height:32px;border-radius:50%;background:rgba(67,233,123,0.12);display:flex;align-items:center;justify-content:center;font-weight:900;color:var(--accent3);font-size:12px;flex-shrink:0;">L7</div><div><div style="font-weight:700;font-size:13px;margin-bottom:2px;">90日後（3か月）</div><div style="font-size:12px;color:var(--text-sub);">長期保持の強化。半年に向けて記憶の根を深める。</div></div></div>
+      <div style="display:flex;align-items:center;gap:12px;padding:10px;background:var(--bg);border-radius:10px;"><div style="width:32px;height:32px;border-radius:50%;background:rgba(67,233,123,0.10);display:flex;align-items:center;justify-content:center;font-weight:900;color:var(--accent3);font-size:12px;flex-shrink:0;">L8</div><div><div style="font-weight:700;font-size:13px;margin-bottom:2px;">180日後（半年）</div><div style="font-size:12px;color:var(--text-sub);">超長期記憶の確認。ここまで来れば永続記憶に近い。</div></div></div>
+      <div style="display:flex;align-items:center;gap:12px;padding:10px;background:var(--bg);border-radius:10px;"><div style="width:32px;height:32px;border-radius:50%;background:rgba(67,233,123,0.08);display:flex;align-items:center;justify-content:center;font-weight:900;color:var(--accent3);font-size:12px;flex-shrink:0;">L9</div><div><div style="font-weight:700;font-size:13px;margin-bottom:2px;">365日後（1年）</div><div style="font-size:12px;color:var(--text-sub);">最終確認。1年後も覚えていれば「完全習得」！</div></div></div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /app-wrap -->
+
+<!-- Modal -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" id="modal">
+    <div id="modalContent"></div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ===================== CONSTANTS =====================
+const REVIEW_DAYS = [1, 3, 7, 14, 30, 60, 90, 180, 365];
+const STORAGE_KEY  = 'rememory_items_v3';
+const CAT_KEY      = 'rememory_cats_v1';
+const NOTIF_KEY    = 'rememory_notif';
+
+const QUOTE_KEY    = 'rememory_quotes_used';
+
+// ===================== QUOTES (150件) =====================
+const QUOTES = [
+  {text:"夢なき者に成功なし",author:"吉田松陰"},
+  {text:"成功とは、情熱を失わずに失敗を重ねることである",author:"ウィンストン・チャーチル"},
+  {text:"天才とは努力する凡才のことである",author:"アルベルト・アインシュタイン"},
+  {text:"努力は必ず報われる",author:"王貞治"},
+  {text:"小さなことを重ねることが、とんでもないところへ行くただ一つの道",author:"イチロー"},
+  {text:"諦めたらそこで試合終了ですよ",author:"井上雄彦"},
+  {text:"継続は力なり",author:"荀子"},
+  {text:"あなたの未来を決めるのは、今の行動である",author:"マハトマ・ガンジー"},
+  {text:"成功するまで続ければ、失敗はない",author:"松下幸之助"},
+  {text:"自分を信じなさい。そうすれば道は開ける",author:"ゲーテ"},
+  {text:"困難の中にこそ、機会がある",author:"アルベルト・アインシュタイン"},
+  {text:"努力に勝る天才なし",author:"トーマス・エジソン"},
+  {text:"人生は一度きりだ。挑戦し続けろ",author:"マイケル・ジョーダン"},
+  {text:"できると思えばできる",author:"ナポレオン・ボナパルト"},
+  {text:"人生は挑戦の連続である",author:"ヘレン・ケラー"},
+  {text:"最も重要なのは、やめないことだ",author:"ウォルト・ディズニー"},
+  {text:"未来とは、今である",author:"マーガレット・ミード"},
+  {text:"行動がすべてを変える",author:"ピーター・ドラッカー"},
+  {text:"成功とは日々の小さな努力の積み重ねである",author:"ロバート・コリアー"},
+  {text:"失敗は成功の母",author:"トーマス・エジソン"},
+  {text:"大きな目標を持て。そして挑戦し続けろ",author:"本田宗一郎"},
+  {text:"自分を変えることができるのは自分だけ",author:"稲盛和夫"},
+  {text:"できるかどうかではない。やるかどうかだ",author:"孫正義"},
+  {text:"目標がある人は強い",author:"大谷翔平"},
+  {text:"努力は裏切らない",author:"羽生結弦"},
+  {text:"昨日より今日、今日より明日",author:"長嶋茂雄"},
+  {text:"勝つことよりも、挑戦することが大事だ",author:"イチロー"},
+  {text:"準備がすべてだ",author:"王貞治"},
+  {text:"習慣が人格をつくる",author:"アリストテレス"},
+  {text:"人生に無駄な経験などない",author:"渋沢栄一"},
+  {text:"挑戦しないことが最大の失敗",author:"本田圭佑"},
+  {text:"一歩踏み出す勇気が全てを変える",author:"アメリア・イアハート"},
+  {text:"夢を見ることができれば、それは実現できる",author:"ウォルト・ディズニー"},
+  {text:"成功は行動から生まれる",author:"ビル・ゲイツ"},
+  {text:"努力する者は希望を語り、怠ける者は不満を語る",author:"井上靖"},
+  {text:"未来は自分で切り開くものだ",author:"福沢諭吉"},
+  {text:"結果を出す人は、やり続けた人だ",author:"コービー・ブライアント"},
+  {text:"できない理由を探すな",author:"トニー・ロビンズ"},
+  {text:"失敗しても挑戦したことに価値がある",author:"ネルソン・マンデラ"},
+  {text:"やらなければ何も変わらない",author:"デール・カーネギー"},
+  {text:"どんなにゆっくりでも、止まらなければ進んでいる",author:"孔子"},
+  {text:"成功する人は諦めなかった人",author:"エイブラハム・リンカーン"},
+  {text:"困難を乗り越えた先に成長がある",author:"フランクリン・D・ルーズベルト"},
+  {text:"まずは始めよ",author:"ホラティウス"},
+  {text:"努力する限り失敗ではない",author:"アルベルト・アインシュタイン"},
+  {text:"行動は恐怖を消す",author:"デール・カーネギー"},
+  {text:"勝利は準備された者に訪れる",author:"ルイ・パスツール"},
+  {text:"チャンスは準備された心にのみ訪れる",author:"ルイ・パスツール"},
+  {text:"最も大きなリスクは、何もしないことだ",author:"マーク・ザッカーバーグ"},
+  {text:"人生は自分との戦いだ",author:"ガッツ石松"},
+  {text:"努力は必ず報われる。もし報われない努力があるのなら、それはまだ努力と呼べない",author:"王貞治"},
+  {text:"天才とは、1％のひらめきと99％の努力である",author:"トーマス・エジソン"},
+  {text:"学ぶことをやめた者は、20歳であれ80歳であれ老人である",author:"ヘンリー・フォード"},
+  {text:"今日という日は、残りの人生の最初の日である",author:"チャールズ・ディードリッヒ"},
+  {text:"夢を見るから、人生は輝く",author:"モーツァルト"},
+  {text:"できると思えばできる。できないと思えばできない",author:"ヘンリー・フォード"},
+  {text:"失敗したところでやめてしまうから失敗になる。成功するところまで続ければ、それは成功になる",author:"松下幸之助"},
+  {text:"自分に打ち勝つことが、最も偉大な勝利である",author:"プラトン"},
+  {text:"未来を予測する最良の方法は、それを創ることだ",author:"ピーター・ドラッカー"},
+  {text:"学問に王道なし",author:"ユークリッド"},
+  {text:"挑戦する限り、人は若い",author:"サミュエル・ウルマン"},
+  {text:"限界は、自分で決めているだけだ",author:"マイケル・ジョーダン"},
+  {text:"成功する秘訣は、成功するまで続けることだ",author:"ベンジャミン・ディズレーリ"},
+  {text:"苦しいから逃げるのではない。逃げるから苦しくなるのだ",author:"ウィリアム・ジェームズ"},
+  {text:"為せば成る、為さねば成らぬ何事も",author:"上杉鷹山"},
+  {text:"知識への投資は、常に最高の利益を生む",author:"ベンジャミン・フランクリン"},
+  {text:"人生において重要なのは、生きることではなく、よく生きることである",author:"ソクラテス"},
+  {text:"人にできて、きみだけにできないなんてことあるもんか",author:"ドラえもん／藤子・F・不二雄"},
+  {text:"転んだら、いつかは立ち上がればいい",author:"ネルソン・マンデラ"},
+  {text:"不可能とは、臆病者の言い訳である",author:"ナポレオン"},
+  {text:"成功への道に、エレベーターはない",author:"ジグ・ジグラー"},
+  {text:"今日の努力が、明日の自分を作る",author:"稲盛和夫"},
+  {text:"希望は強い勇気であり、新たな意志である",author:"マルティン・ルター"},
+  {text:"人生は自転車に乗るようなものだ。倒れないためには走り続けなければならない",author:"アルベルト・アインシュタイン"},
+  {text:"最も重要なのは、挑戦し続けることだ",author:"本田宗一郎"},
+  {text:"行動する者だけが未来を変えられる",author:"ネルソン・マンデラ"},
+  {text:"まずは始めることだ",author:"ウォルト・ディズニー"},
+  {text:"習慣は第二の天性である",author:"キケロ"},
+  {text:"できるまでやれば、できる",author:"斎藤一人"},
+  {text:"毎日の小さな進歩が、大きな結果を生む",author:"ナポレオン・ヒル"},
+  {text:"人生を変えるのは、いつも小さな習慣だ",author:"ジェームズ・クリア"},
+  {text:"諦めたら、そこで試合終了ですよ",author:"安西光義／SLAM DUNK"},
+  {text:"オレは海賊王になる！",author:"モンキー・D・ルフィ／ONE PIECE"},
+  {text:"努力した者が全て報われるとは限らん。しかし、成功した者は皆すべからく努力しておる",author:"鴨川源二／はじめの一歩"},
+  {text:"人が本気で何かを始めるのに、遅すぎることなんてない",author:"比企谷八幡"},
+  {text:"遠回りこそが俺の最短の道だった",author:"うずまきナルト／NARUTO"},
+  {text:"負けたことがあるというのが、いつか大きな財産になる",author:"矢沢栄作／SLAM DUNK"},
+  {text:"何かを変えることができる人間がいるとすれば、大事なものを捨てることができる人だ",author:"アルミン・アルレルト／進撃の巨人"},
+  {text:"越えられない壁は、自分が諦めた瞬間に壁になる",author:"日向翔陽／ハイキュー!!"},
+  {text:"努力に勝る天才なし",author:"ロック・リー／NARUTO"},
+  {text:"今を戦えない者に、次とか来年とかを言う資格はない",author:"大空翼／キャプテン翼"},
+  {text:"できるかできないかじゃない。やるんだよ",author:"竈門炭治郎／鬼滅の刃"},
+  {text:"壁にぶつかるのは、前に進んでいる証拠だ",author:"孫悟空／ドラゴンボール"},
+  {text:"努力は裏切らない",author:"吉田沙保里"},
+  {text:"限界を決めるのは自分自身だ",author:"内村航平"},
+  {text:"昨日の自分を超えることだけを考えている",author:"羽生結弦"},
+  {text:"苦しい時こそ、自分が成長している時",author:"高橋尚子"},
+  {text:"夢は見るものではなく、叶えるもの",author:"北島康介"},
+  {text:"自分を信じてやり続けるしかない",author:"野村忠宏"},
+  {text:"プレッシャーは、自分が期待されている証拠",author:"大坂なおみ"},
+  {text:"勝つために必要なのは、最後まで諦めないこと",author:"吉田沙保里"},
+  {text:"努力した時間は絶対に裏切らない",author:"松山英樹"},
+  {text:"失敗しても、挑戦したことに意味がある",author:"羽生結弦"},
+  {text:"才能より、続ける力の方が大切",author:"高橋尚子"},
+  {text:"一番大事なのは、楽しむこと",author:"北島康介"},
+  {text:"苦しい練習を乗り越えた先に結果がある",author:"内村航平"},
+  {text:"挑戦しない限り、成功はない",author:"野村忠宏"},
+  {text:"結果は後からついてくる。まずは全力を尽くすこと",author:"イチロー"},
+  {text:"毎日の積み重ねが、自信になる",author:"吉田沙保里"},
+  {text:"本番のために、練習でどれだけ追い込めるか",author:"北島康介"},
+  {text:"できるまでやる。それだけ",author:"羽生結弦"},
+  {text:"努力せずに何かできるようになる人のことを天才というのなら、僕はそうじゃない",author:"イチロー"},
+  {text:"夢をつかむということは、一気にはできません",author:"イチロー"},
+  {text:"継続することが一番難しい",author:"イチロー"},
+  {text:"結果が出ない時、どういう自分でいられるか",author:"イチロー"},
+  {text:"準備というのは、言い訳の材料となり得るものを排除していくこと",author:"イチロー"},
+  {text:"自分の限界を見てから、バットを置きたい",author:"大谷翔平"},
+  {text:"先入観は可能を不可能にする",author:"大谷翔平"},
+  {text:"人生が夢をつくるんじゃない。夢が人生をつくるんだ",author:"長嶋茂雄"},
+  {text:"努力は人を裏切らない",author:"王貞治"},
+  {text:"敵と戦う時間は短い。自分との戦いこそが明暗を分ける",author:"王貞治"},
+  {text:"一生懸命やって勝つことの次にいいことは、一生懸命やって負けること",author:"野村克也"},
+  {text:"失敗と書いて成長と読む",author:"野村克也"},
+  {text:"勝ちに不思議の勝ちあり、負けに不思議の負けなし",author:"野村克也"},
+  {text:"才能とは、努力を継続できる力",author:"野村克也"},
+  {text:"努力に即効性はない",author:"落合博満"},
+  {text:"練習は裏切らない。自分を裏切らないために練習する",author:"松井秀喜"},
+  {text:"苦しい時ほど笑え",author:"星野仙一"},
+  {text:"夢は近づくと目標に変わる",author:"松井秀喜"},
+  {text:"最後に勝つ人は、途中で投げ出さなかった人",author:"栗山英樹"},
+  {text:"才能とは、努力を続けられる力のことである",author:"羽生善治"},
+  {text:"未来は、自分の手で変えられる",author:"ルルーシュ・ランペルージ／コードギアス"},
+  {text:"下を向くんじゃねぇ。バレーは常に上を向くスポーツだ",author:"烏養繋心／ハイキュー!!"},
+  {text:"考えろ。考えるんだ",author:"秋山深一／LIAR GAME"},
+  {text:"夢をつかんだ奴より、夢を追ってる奴のほうが時には力を発揮するもんでさぁ",author:"坂田銀時／銀魂"},
+  {text:"今が一番若い。今すぐ始めよう",author:"プロバーブ"},
+  {text:"千里の道も一歩から",author:"老子"},
+  {text:"雨垂れ石を穿つ",author:"ことわざ"},
+  {text:"七転び八起き",author:"ことわざ"},
+  {text:"石の上にも三年",author:"ことわざ"},
+  {text:"塵も積もれば山となる",author:"ことわざ"},
+  {text:"好きこそものの上手なれ",author:"ことわざ"},
+  {text:"急がば回れ",author:"ことわざ"},
+  {text:"学べば学ぶほど、自分が何も知らないことがわかる",author:"アルベルト・アインシュタイン"},
+  {text:"知ることよりも、考えることが大切だ",author:"アルベルト・アインシュタイン"},
+  {text:"もし今日が人生最後の日だとしたら、今日やることは本当にやりたいことか？",author:"スティーブ・ジョブズ"},
+  {text:"ハングリーであれ。愚かであれ",author:"スティーブ・ジョブズ"},
+  {text:"点と点はいつか繋がる",author:"スティーブ・ジョブズ"},
+  {text:"最高の復讐は、圧倒的な成功を収めることだ",author:"フランク・シナトラ"},
+  {text:"成功は最終的なものではなく、失敗は致命的なものではない。大切なのは続ける勇気だ",author:"ウィンストン・チャーチル"},
+];
+
+// ===================== DATA =====================
+function loadItems() { try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch { return []; } }
+function saveItems(items) { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); }
+function loadCats() { try { return JSON.parse(localStorage.getItem(CAT_KEY)) || []; } catch { return []; } }
+function saveCats(c) { localStorage.setItem(CAT_KEY, JSON.stringify(c)); }
+function today() { return new Date().toISOString().split('T')[0]; }
+function addDays(dateStr, n) { const d = new Date(dateStr + 'T00:00:00'); d.setDate(d.getDate() + n); return d.toISOString().split('T')[0]; }
+function daysDiff(a, b) { return Math.round((new Date(b+'T00:00:00') - new Date(a+'T00:00:00')) / 86400000); }
+function formatDate(d) { const [,m,day] = d.split('-'); return `${m}/${day}`; }
+function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ===================== QUOTE ENGINE =====================
+function getNextQuote() {
+  let used = [];
+  try { used = JSON.parse(localStorage.getItem(QUOTE_KEY)) || []; } catch {}
+  const total = QUOTES.length;
+  if (used.length >= total) { used = []; }
+  const remaining = QUOTES.map((_,i)=>i).filter(i => !used.includes(i));
+  const idx = remaining[Math.floor(Math.random() * remaining.length)];
+  used.push(idx);
+  localStorage.setItem(QUOTE_KEY, JSON.stringify(used));
+  return { quote: QUOTES[idx], usedCount: used.length, total };
+}
+
+function showQuoteModal(nextReviewInfo) {
+  const { quote, usedCount, total } = getNextQuote();
+  const html = `
+    <div class="quote-modal">
+      <div class="quote-icon">🎉</div>
+      <div style="font-size:13px;color:var(--accent3);font-weight:700;margin-bottom:12px;letter-spacing:1px;">復習完了！</div>
+      <div class="quote-text">「${escHtml(quote.text)}」</div>
+      <div class="quote-author">― ${escHtml(quote.author)}</div>
+      <div class="quote-progress">名言 ${usedCount} / ${total} 収集済み</div>
+      ${nextReviewInfo ? `<div style="font-size:12px;color:var(--text-sub);margin-bottom:20px;">次回復習：<span style="color:var(--accent);font-weight:700;">${nextReviewInfo}</span></div>` : `<div style="font-size:13px;color:var(--accent3);font-weight:700;margin-bottom:20px;">🏆 全ステージ完全習得！</div>`}
+      <button class="btn-modal btn-primary" onclick="closeModal()" style="width:100%;">閉じる</button>
+    </div>`;
+  document.getElementById('modalContent').innerHTML = html;
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+// ===================== CRUD =====================
+function addItem() {
+  const title = document.getElementById('inputTitle').value.trim();
+  if (!title) { showToast('❗ 学習内容を入力してください', true); return; }
+  const items = loadItems();
+  const td = today();
+  items.unshift({
+    id: Date.now(), title,
+    category: document.getElementById('inputCategory').value,
+    memo: document.getElementById('inputMemo').value.trim(),
+    createdAt: td,
+    nextReview: addDays(td, REVIEW_DAYS[0]),
+    level: 0, completed: false, reviewHistory: []
+  });
+  saveItems(items);
+  document.getElementById('inputTitle').value = '';
+  document.getElementById('inputMemo').value = '';
+  document.getElementById('inputCategory').value = '';
+  showToast('✅ 登録しました！復習スケジュールを生成しました');
+  updateStats(); renderToday(); renderAll(); switchTab('today');
+}
+
+function completeReview(id) {
+  closeModal();
+  const items = loadItems();
+  const idx = items.findIndex(i => i.id === id);
+  if (idx < 0) return;
+  const item = items[idx];
+  item.reviewHistory = item.reviewHistory || [];
+  item.reviewHistory.push({ date: today(), level: item.level });
+  item.level = (item.level || 0) + 1;
+  let nextInfo = null;
+  if (item.level >= REVIEW_DAYS.length) {
+    item.completed = true; item.nextReview = null;
+  } else {
+    item.nextReview = addDays(today(), REVIEW_DAYS[item.level]);
+    nextInfo = `${formatDate(item.nextReview)}（${REVIEW_DAYS[item.level]}日後）`;
+  }
+  items[idx] = item;
+  saveItems(items);
+  updateStats(); renderToday(); renderAll();
+  showQuoteModal(nextInfo);
+}
+
+function deleteItem(id) {
+  closeModal();
+  saveItems(loadItems().filter(i => i.id !== id));
+  updateStats(); renderToday(); renderAll();
+  showToast('🗑 削除しました');
+}
+
+// ===================== CATEGORY =====================
+function renderCatTags() {
+  const cats = loadCats();
+  document.getElementById('catTags').innerHTML = cats.length === 0
+    ? `<span style="color:var(--text-dim);font-size:13px;">まだカテゴリがありません</span>`
+    : cats.map(c => `<div class="cat-tag">${escHtml(c)}<button class="cat-tag-del" onclick="deleteCategory('${escHtml(c)}')">×</button></div>`).join('');
+  // Update selects
+  const sel = document.getElementById('inputCategory');
+  const cur = sel.value;
+  sel.innerHTML = `<option value="">— カテゴリなし —</option>` + cats.map(c => `<option ${c===cur?'selected':''}>${escHtml(c)}</option>`).join('');
+}
+
+function addCategory() {
+  const val = document.getElementById('catInput').value.trim();
+  if (!val) return;
+  const cats = loadCats();
+  if (cats.includes(val)) { showToast('❗ 同じカテゴリが既にあります', true); return; }
+  cats.push(val);
+  saveCats(cats);
+  document.getElementById('catInput').value = '';
+  renderCatTags();
+  showToast(`✅ カテゴリ「${val}」を追加しました`);
+}
+
+function deleteCategory(name) {
+  const cats = loadCats().filter(c => c !== name);
+  saveCats(cats);
+  renderCatTags();
+  showToast(`🗑 カテゴリ「${name}」を削除しました`);
+}
+
+// ===================== NOTIFICATION =====================
+function loadNotifSetting() { return localStorage.getItem(NOTIF_KEY) === 'on'; }
+
+function toggleNotification() {
+  const isOn = loadNotifSetting();
+  if (!isOn) {
+    if (!('Notification' in window)) { showToast('❗ このブラウザは通知非対応です', true); return; }
+    Notification.requestPermission().then(p => {
+      if (p === 'granted') {
+        localStorage.setItem(NOTIF_KEY, 'on');
+        updateNotifUI();
+        showToast('🔔 通知をオンにしました');
+        scheduleNotif();
+      } else {
+        showToast('❗ ブラウザの通知許可が必要です', true);
+      }
+    });
+  } else {
+    localStorage.setItem(NOTIF_KEY, 'off');
+    updateNotifUI();
+    showToast('🔕 通知をオフにしました');
+  }
+}
+
+function saveNotifSetting() {
+  const checked = document.getElementById('notifCheck').checked;
+  if (checked) {
+    if (!('Notification' in window)) { document.getElementById('notifCheck').checked = false; showToast('❗ このブラウザは通知非対応です', true); return; }
+    Notification.requestPermission().then(p => {
+      if (p === 'granted') {
+        localStorage.setItem(NOTIF_KEY, 'on');
+        updateNotifUI();
+        showToast('🔔 通知をオンにしました');
+        scheduleNotif();
+      } else {
+        document.getElementById('notifCheck').checked = false;
+        showToast('❗ ブラウザの通知許可が必要です', true);
+      }
+    });
+  } else {
+    localStorage.setItem(NOTIF_KEY, 'off');
+    updateNotifUI();
+    showToast('🔕 通知をオフにしました');
+  }
+}
+
+function updateNotifUI() {
+  const on = loadNotifSetting();
+  const btn = document.getElementById('notifToggle');
+  btn.textContent = on ? '🔔 通知オン' : '🔔 通知オフ';
+  btn.className = 'notif-toggle' + (on ? ' on' : '');
+  const chk = document.getElementById('notifCheck');
+  if (chk) chk.checked = on;
+}
+
+function scheduleNotif() {
+  if (!loadNotifSetting() || Notification.permission !== 'granted') return;
+  const items = loadItems();
+  const td = today();
+  const dueToday = items.filter(i => !i.completed && i.nextReview && daysDiff(td, i.nextReview) <= 0).length;
+  if (dueToday > 0) {
+    new Notification('📚 ReMemory', { body: `今日の復習が ${dueToday} 件あります！`, icon: '' });
+  }
+}
+
+function sendTestNotif() {
+  if (!('Notification' in window)) { showToast('❗ このブラウザは通知非対応です', true); return; }
+  Notification.requestPermission().then(p => {
+    if (p === 'granted') {
+      new Notification('📚 ReMemory テスト通知', { body: '通知が正常に動作しています！' });
+      showToast('✅ テスト通知を送信しました');
+    } else {
+      showToast('❗ ブラウザの通知を許可してください', true);
+    }
+  });
+}
+
+// ===================== COUNTDOWN (複数対応) =====================
+const EXAM_KEY = 'rememory_exams_v2';
+function loadExams() { try { return JSON.parse(localStorage.getItem(EXAM_KEY)) || []; } catch { return []; } }
+function saveExams(e) { localStorage.setItem(EXAM_KEY, JSON.stringify(e)); }
+
+function saveCountdown() {
+  const name = document.getElementById('examName').value.trim();
+  const date = document.getElementById('examDate').value;
+  if (!name || !date) { showToast('❗ 試験名と日付を入力してください', true); return; }
+  const exams = loadExams();
+  exams.push({ id: Date.now(), name, date });
+  // 日付昇順でソート
+  exams.sort((a,b) => a.date.localeCompare(b.date));
+  saveExams(exams);
+  document.getElementById('examName').value = '';
+  document.getElementById('examDate').value = '';
+  renderCountdown();
+  renderExamList();
+  showToast(`✅ 「${name}」を追加しました`);
+}
+
+function deleteExam(id) {
+  const exams = loadExams().filter(e => e.id !== id);
+  saveExams(exams);
+  renderCountdown();
+  renderExamList();
+  showToast('🗑 検定日を削除しました');
+}
+
+function getUrgencyIcon(diff) {
+  if (diff < 0) return { icon:'🎓', cls:'', label:'終了' };
+  if (diff === 0) return { icon:'🔥', cls:'urgent', label:'本日！' };
+  if (diff <= 7) return { icon:'⚡', cls:'urgent', label:'まで' };
+  if (diff <= 30) return { icon:'📅', cls:'soon', label:'まで' };
+  return { icon:'🎯', cls:'', label:'まで' };
+}
+
+function renderCountdown() {
+  const bar = document.getElementById('countdownBar');
+  const exams = loadExams();
+  const td = today();
+  if (!exams.length) {
+    bar.innerHTML = `<button class="countdown-add-btn" onclick="switchTab('settings')">＋ 検定日・試験日を設定する</button>`;
+    return;
+  }
+  bar.innerHTML = exams.map(exam => {
+    const diff = daysDiff(td, exam.date);
+    const { icon, cls, label } = getUrgencyIcon(diff);
+    const daysText = diff < 0 ? `${Math.abs(diff)}日前に終了` : `${diff}`;
+    const daysSuffix = diff < 0 ? '' : '日';
+    return `<div class="countdown-card ${cls}">
+      <div class="countdown-left">
+        <div class="countdown-icon">${icon}</div>
+        <div>
+          <div class="countdown-label">試験${label}</div>
+          <div class="countdown-name">${escHtml(exam.name)}</div>
+          <div class="countdown-date-sub">${exam.date.replace(/-/g,'/')}</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        ${diff >= 0 ? `<div class="countdown-days">${daysText}<span>${daysSuffix}</span></div>` : `<div style="font-size:13px;color:var(--text-sub);">${daysText}</div>`}
+        <div class="countdown-actions">
+          <button class="btn-countdown-del" onclick="deleteExam(${exam.id})" title="削除">🗑</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderExamList() {
+  const exams = loadExams();
+  const td = today();
+  const el = document.getElementById('examList');
+  if (!el) return;
+  if (!exams.length) { el.innerHTML = `<div style="color:var(--text-dim);font-size:13px;padding:4px 0;">まだ検定日が登録されていません</div>`; return; }
+  el.innerHTML = exams.map(exam => {
+    const diff = daysDiff(td, exam.date);
+    const { icon } = getUrgencyIcon(diff);
+    const daysLabel = diff < 0 ? `${Math.abs(diff)}日前に終了` : diff === 0 ? '本日！' : `あと${diff}日`;
+    const daysColor = diff <= 0 ? 'var(--accent2)' : diff <= 7 ? 'var(--accent4)' : 'var(--accent)';
+    return `<div class="exam-item">
+      <div class="exam-item-left">
+        <div class="exam-item-icon">${icon}</div>
+        <div>
+          <div class="exam-item-name">${escHtml(exam.name)}</div>
+          <div class="exam-item-date">${exam.date.replace(/-/g,'/')}</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div class="exam-item-days" style="color:${daysColor};">${daysLabel}</div>
+        <button class="btn-countdown-del" onclick="deleteExam(${exam.id})" title="削除">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ===================== STATS =====================
+function updateStats() {
+  const items = loadItems();
+  const td = today();
+  let todayC=0, overdueC=0, doneC=0;
+  for (const item of items) {
+    if (item.completed) { doneC++; continue; }
+    if (!item.nextReview) continue;
+    const diff = daysDiff(td, item.nextReview);
+    if (diff < 0) overdueC++;
+    else if (diff === 0) todayC++;
+  }
+  document.getElementById('statToday').textContent = todayC;
+  document.getElementById('statOverdue').textContent = overdueC;
+  document.getElementById('statTotal').textContent = items.length;
+  document.getElementById('statDone').textContent = doneC;
+  const now = new Date();
+  const days = ['日','月','火','水','木','金','土'];
+  document.getElementById('headerDate').textContent = `${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')} (${days[now.getDay()]})`;
+}
+
+// ===================== RENDER TODAY =====================
+function renderToday() {
+  const items = loadItems();
+  const td = today();
+  const overdue=[], todayItems=[], upcoming=[], doneAll=[];
+  for (const item of items) {
+    if (item.completed) { doneAll.push(item); continue; }
+    if (!item.nextReview) continue;
+    const diff = daysDiff(td, item.nextReview);
+    if (diff < 0) overdue.push(item);
+    else if (diff === 0) todayItems.push(item);
+    else if (diff <= 3) upcoming.push(item);
+  }
+  let html = '';
+  if (overdue.length===0 && todayItems.length===0 && upcoming.length===0 && doneAll.length===0) {
+    html = `<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-title">まだ何も登録されていません</div><div class="empty-desc">「登録」タブから学習内容を追加してみましょう。<br>忘却曲線に基づいた復習日を自動で管理します。</div></div>`;
+    document.getElementById('todayContent').innerHTML = html; return;
+  }
+  if (overdue.length > 0) {
+    html += `<div class="section-header"><div class="section-title">⚠️ 期限超過 <span class="badge badge-yellow">${overdue.length}</span></div></div><div class="review-list">`;
+    for (const i of overdue) html += renderCard(i,'overdue',td);
+    html += `</div><div class="divider"></div>`;
+  }
+  if (todayItems.length > 0) {
+    html += `<div class="section-header"><div class="section-title">🔥 今日やること <span class="badge badge-red">${todayItems.length}</span></div></div><div class="review-list">`;
+    for (const i of todayItems) html += renderCard(i,'today',td);
+    html += `</div><div class="divider"></div>`;
+  }
+  if (upcoming.length > 0) {
+    html += `<div class="section-header"><div class="section-title">📅 近日予定（3日以内）<span class="badge badge-blue">${upcoming.length}</span></div></div><div class="review-list">`;
+    for (const i of upcoming) html += renderCard(i,'upcoming',td);
+    html += `</div><div class="divider"></div>`;
+  }
+  if (doneAll.length > 0) {
+    html += `<div class="section-header"><div class="section-title">🏆 完全習得済み <span class="badge badge-green">${doneAll.length}</span></div></div><div class="review-list">`;
+    for (const i of doneAll) html += renderCard(i,'done',td);
+    html += `</div>`;
+  }
+  document.getElementById('todayContent').innerHTML = html;
+}
+
+// ===================== RENDER CARD =====================
+function renderCard(item, type, td) {
+  const lvl = item.level || 0;
+  const maxLvl = REVIEW_DAYS.length;
+  let datePill='', cardClass='';
+  if (type==='overdue') { datePill=`<span class="date-pill overdue">⚠ ${Math.abs(daysDiff(td,item.nextReview))}日超過</span>`; cardClass='overdue'; }
+  else if (type==='today') { datePill=`<span class="date-pill today">🔥 今日</span>`; cardClass='today'; }
+  else if (type==='upcoming') { const d=daysDiff(td,item.nextReview); datePill=`<span class="date-pill soon">📅 ${d===1?'明日':d+'日後'}(${formatDate(item.nextReview)})</span>`; cardClass='upcoming'; }
+  else if (type==='done') { datePill=`<span class="date-pill future">✅ 習得完了</span>`; cardClass='completed-card'; }
+  const canComplete = type==='today'||type==='overdue';
+  const dots = Array.from({length:maxLvl},(_,i)=>`<div class="level-dot ${i<lvl?'filled':''}"></div>`).join('');
+  const catBadge = item.category ? `<span class="card-cat">${escHtml(item.category)}</span>` : '';
+  const memoIcon = item.memo ? `<span title="${escHtml(item.memo)}" style="cursor:default;font-size:13px;">💬</span>` : '';
+  return `<div class="review-card ${cardClass}">
+    <button class="card-check ${type==='done'?'checked':''}" onclick="${canComplete?`completeReview(${item.id})`:''}" ${!canComplete?'style="cursor:default"':''}>${type==='done'?'✓':''}</button>
+    <div class="card-body">
+      <div class="card-title">${escHtml(item.title)}</div>
+      <div class="card-meta">${catBadge}${datePill}<div class="level-dots" title="Lv.${lvl}/${maxLvl}">${dots}</div><span class="card-date-info">登録:${formatDate(item.createdAt)}</span>${memoIcon}</div>
+    </div>
+    <div class="card-actions">
+      <button class="btn-icon" onclick="openModal(${item.id})" title="詳細">📋</button>
+      <button class="btn-icon del" onclick="openDeleteConfirm(${item.id})" title="削除">🗑</button>
+    </div>
+  </div>`;
+}
+
+// ===================== RENDER ALL =====================
+function renderAll() {
+  const items = loadItems();
+  const query = (document.getElementById('searchInput')?.value||'').toLowerCase();
+  const activeFilter = document.querySelector('#filterBar .filter-chip.active')?.dataset.cat||'';
+  const cats = [...new Set(items.map(i=>i.category).filter(Boolean))];
+  let fh = `<button class="filter-chip ${!activeFilter?'active':''}" data-cat="" onclick="setFilter('')">すべて</button>`;
+  for (const c of cats) fh += `<button class="filter-chip ${activeFilter===c?'active':''}" data-cat="${escHtml(c)}" onclick="setFilter('${escHtml(c)}')">${escHtml(c)}</button>`;
+  document.getElementById('filterBar').innerHTML = fh;
+  const filtered = items.filter(item => {
+    const mq = !query || item.title.toLowerCase().includes(query)||(item.category||'').toLowerCase().includes(query);
+    const mc = !activeFilter || item.category===activeFilter;
+    return mq&&mc;
+  });
+  if (!filtered.length) { document.getElementById('allContent').innerHTML=`<div class="empty-state"><div class="empty-icon">🔍</div><div class="empty-title">該当なし</div></div>`; return; }
+  const td = today();
+  let html = `<div class="review-list">`;
+  for (const item of filtered) {
+    let type='upcoming';
+    if (item.completed) type='done';
+    else if (item.nextReview) { const d=daysDiff(td,item.nextReview); if(d<0)type='overdue'; else if(d===0)type='today'; }
+    html += renderCard(item,type,td);
+  }
+  document.getElementById('allContent').innerHTML = html + `</div>`;
+}
+
+function setFilter(cat) {
+  document.querySelectorAll('#filterBar .filter-chip').forEach(el=>el.classList.toggle('active',el.dataset.cat===cat));
+  renderAll();
+}
+
+// ===================== MODAL =====================
+function openModal(id) {
+  const item = loadItems().find(i=>i.id===id);
+  if (!item) return;
+  const lvl = item.level||0;
+  const steps = REVIEW_DAYS.map((d,i)=>{
+    const stepDate = addDays(item.createdAt, REVIEW_DAYS[i]);
+    let icon='⬜',status='';
+    if(i<lvl){icon='✅';status='<span style="color:var(--accent3);font-size:11px;">完了</span>';}
+    else if(i===lvl&&!item.completed){icon='🔥';status='<span style="color:var(--accent2);font-size:11px;">次回</span>';}
+    else{icon='🔵';}
+    return `<div class="schedule-step"><span class="step-icon">${icon}</span><span class="step-label">L${i+1}：${d}日後</span><span class="step-date">${formatDate(stepDate)}</span>${status}</div>`;
+  }).join('');
+  const catBadge = item.category?`<span class="card-cat">${escHtml(item.category)}</span>`:'';
+  const canDo = !item.completed&&item.nextReview&&daysDiff(today(),item.nextReview)<=0;
+  document.getElementById('modalContent').innerHTML = `
+    <h3>📋 学習アイテム詳細</h3>
+    <div class="modal-item-title">${escHtml(item.title)}</div>
+    <div class="modal-meta">${catBadge?catBadge+'&ensp;':''}登録日：${item.createdAt}${item.memo?'<br>📝 '+escHtml(item.memo):''}</div>
+    <div class="modal-schedule"><div class="modal-schedule-title">復習スケジュール（登録日基準）</div>${steps}</div>
+    <div class="modal-actions">
+      ${canDo?`<button class="btn-modal btn-primary" onclick="completeReview(${item.id})">✅ 復習完了</button>`:''}
+      <button class="btn-modal btn-danger" onclick="openDeleteConfirm(${item.id})">🗑 削除</button>
+      <button class="btn-modal btn-secondary" onclick="closeModal()">閉じる</button>
+    </div>`;
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function openDeleteConfirm(id) {
+  const item = loadItems().find(i=>i.id===id);
+  if (!item) return;
+  document.getElementById('modalContent').innerHTML = `
+    <h3>🗑 本当に削除しますか？</h3>
+    <p style="color:var(--text-sub);font-size:14px;margin-bottom:20px;">「${escHtml(item.title)}」を削除します。この操作は元に戻せません。</p>
+    <div class="modal-actions">
+      <button class="btn-modal btn-danger" onclick="deleteItem(${item.id})">削除する</button>
+      <button class="btn-modal btn-secondary" onclick="closeModal()">キャンセル</button>
+    </div>`;
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function closeModal() { document.getElementById('modalOverlay').classList.remove('open'); }
+document.getElementById('modalOverlay').addEventListener('click', function(e){ if(e.target===this)closeModal(); });
+
+// ===================== TABS =====================
+function switchTab(name) {
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('panel-'+name).classList.add('active');
+  const idx = ['today','add','all','settings','curve'].indexOf(name);
+  document.querySelectorAll('.tab-btn')[idx]?.classList.add('active');
+  if(name==='all') renderAll();
+  if(name==='settings') { renderCatTags(); renderExamList(); }
+}
+
+// ===================== PREVIEW SCHEDULE =====================
+function renderPreviewSchedule() {
+  const td = today();
+  let nodes = [`<div class="sched-node"><div class="sched-dot done"></div><div class="sched-label">今日<br>${formatDate(td)}</div></div>`];
+  for (let i=0;i<REVIEW_DAYS.length;i++) {
+    nodes.push(`<div class="sched-line-seg"></div>`);
+    nodes.push(`<div class="sched-node"><div class="sched-dot future"></div><div class="sched-label">+${REVIEW_DAYS[i]}日<br>${formatDate(addDays(td,REVIEW_DAYS[i]))}</div></div>`);
+  }
+  document.getElementById('previewSchedule').innerHTML = nodes.join('');
+}
+
+// ===================== DATA EXPORT =====================
+function exportData() {
+  const data = { items: loadItems(), categories: loadCats(), exportedAt: new Date().toISOString() };
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `rememory_backup_${today()}.json`;
+  a.click();
+  showToast('✅ データをエクスポートしました');
+}
+
+function clearAllData() {
+  if (!confirm('全てのタスクを削除します。本当によろしいですか？')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  updateStats(); renderToday(); renderAll();
+  showToast('🗑 全データを削除しました');
+}
+
+// ===================== TOAST =====================
+function showToast(msg, isError) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.borderColor = isError?'var(--accent2)':'var(--accent3)';
+  t.style.color = isError?'var(--accent2)':'var(--accent3)';
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 3200);
+}
+
+// ===================== INIT =====================
+updateStats();
+renderToday();
+renderPreviewSchedule();
+renderCountdown();
+renderExamList();
+updateNotifUI();
+if (loadNotifSetting()) scheduleNotif();
+</script>
+</body>
+</html>
