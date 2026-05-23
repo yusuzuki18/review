@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>ReMemory — シルクロードの旅</title>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;700;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0d0f14;--surface:#13161e;--surface2:#1a1e2a;--border:#252a38;
+  --accent:#5b8fff;--accent2:#ff6b6b;--accent3:#43e97b;--accent4:#f7b731;--accent5:#a78bfa;
+  --text:#e8eaf0;--text-sub:#7a8099;--text-dim:#454a60;
+  --font:'Zen Kaku Gothic New',sans-serif;--mono:'DM Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;display:flex;flex-direction:column;}
+
+.hdr{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--surface);border-bottom:1px solid var(--border);gap:10px;flex-wrap:wrap;}
+.back-btn{padding:7px 14px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text-sub);font-family:var(--font);font-size:13px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:5px;transition:all .2s;}
+.back-btn:hover{border-color:var(--accent);color:var(--accent);}
+.hdr-title{font-size:16px;font-weight:900;background:linear-gradient(135deg,#f7b731,#43e97b);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.hdr-sub{font-size:10px;color:var(--text-sub);font-family:var(--mono);}
+
+.sel-bar{padding:10px 16px;background:var(--surface2);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;}
+.sel-bar label{font-size:11px;color:var(--text-sub);white-space:nowrap;font-family:var(--mono);}
+.item-select{background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--font);font-size:13px;padding:8px 12px;outline:none;flex:1;max-width:340px;-webkit-appearance:none;}
+.item-select:focus{border-color:var(--accent);}
+
+.stats-bar{display:flex;gap:8px;padding:10px 16px;background:var(--surface);border-bottom:1px solid var(--border);overflow-x:auto;}
+.sc{display:flex;flex-direction:column;align-items:center;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:8px 14px;min-width:76px;flex-shrink:0;}
+.sv{font-size:15px;font-weight:900;font-family:var(--mono);line-height:1;margin-bottom:2px;}
+.sl{font-size:9px;color:var(--text-sub);letter-spacing:.5px;text-transform:uppercase;}
+
+.map-wrap{flex:1;padding:16px;overflow:auto;}
+.map-container{position:relative;width:100%;max-width:900px;margin:0 auto;}
+
+svg.world-map{width:100%;border-radius:16px;border:1px solid var(--border);background:#0a1628;display:block;}
+
+.prog-wrap{max-width:900px;margin:12px auto 0;}
+.prog-header{display:flex;justify-content:space-between;font-size:11px;color:var(--text-sub);font-family:var(--mono);margin-bottom:6px;}
+.prog-bar-bg{background:var(--surface2);border-radius:100px;height:12px;overflow:hidden;border:1px solid var(--border);}
+.prog-bar-fill{height:100%;border-radius:100px;background:linear-gradient(90deg,#f7b731,#43e97b);transition:width 1.2s cubic-bezier(.4,0,.2,1);}
+.city-list{display:flex;justify-content:space-between;margin-top:8px;flex-wrap:wrap;gap:4px;}
+.city-chip{font-size:10px;font-family:var(--mono);padding:3px 8px;border-radius:100px;border:1px solid var(--border);color:var(--text-dim);background:transparent;transition:all .3s;}
+.city-chip.passed{border-color:var(--accent3);color:var(--accent3);background:rgba(67,233,123,.1);}
+.city-chip.current{border-color:var(--accent4);color:var(--accent4);background:rgba(247,183,49,.15);font-weight:700;}
+
+.empty-msg{text-align:center;padding:40px 20px;color:var(--text-dim);}
+.empty-msg .ei{font-size:48px;margin-bottom:12px;}
+.empty-msg p{font-size:14px;color:var(--text-sub);}
+.empty-msg small{font-size:12px;}
+
+.tooltip{position:absolute;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 14px;font-size:12px;pointer-events:none;z-index:100;min-width:160px;box-shadow:0 8px 24px rgba(0,0,0,.5);}
+.tooltip-name{font-size:14px;font-weight:700;margin-bottom:4px;}
+.tooltip-info{color:var(--text-sub);line-height:1.6;}
+.tooltip-badge{display:inline-block;margin-top:6px;font-size:10px;font-family:var(--mono);padding:2px 8px;border-radius:100px;}
+.tb-done{background:rgba(67,233,123,.15);color:var(--accent3);}
+.tb-cur{background:rgba(247,183,49,.2);color:var(--accent4);}
+.tb-fut{background:rgba(255,255,255,.05);color:var(--text-dim);}
+
+@media(max-width:600px){.map-wrap{padding:10px;}}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div style="display:flex;align-items:center;gap:12px;">
+    <a class="back-btn" href="index.html">← 戻る</a>
+    <div>
+      <div class="hdr-title">✈️ シルクロードの旅</div>
+      <div class="hdr-sub">東京 → ロンドン　学習時間1分 = 1km</div>
+    </div>
+  </div>
+</div>
+
+<div class="sel-bar">
+  <label>カテゴリ：</label>
+  <select class="item-select" id="catSelect" onchange="renderMap()">
+    <option value="all">すべての学習記録</option>
+  </select>
+</div>
+
+<div class="stats-bar">
+  <div class="sc"><div class="sv" id="svDist" style="color:#f7b731;">0km</div><div class="sl">進んだ距離</div></div>
+  <div class="sc"><div class="sv" id="svPct" style="color:#43e97b;">0%</div><div class="sl">達成率</div></div>
+  <div class="sc"><div class="sv" id="svTime" style="color:#5b8fff;">0m</div><div class="sl">学習時間</div></div>
+  <div class="sc"><div class="sv" id="svCount" style="color:#a78bfa;">0件</div><div class="sl">記録数</div></div>
+</div>
+
+<div class="map-wrap">
+  <div id="emptyMsg" class="empty-msg" style="display:none;">
+    <div class="ei">📖</div>
+    <p>学習記録がまだありません</p>
+    <small>「登録」→「学習記録」で時間を記録すると旅が始まります</small>
+  </div>
+  <div class="map-container" id="mapContainer">
+    <svg class="world-map" id="worldMap" viewBox="0 0 900 480" xmlns="http://www.w3.org/2000/svg">
+      <!-- 海 -->
+      <rect width="900" height="480" fill="#0a1628"/>
+      <!-- 大陸（簡略SVGパス） -->
+      <!-- ユーラシア大陸 -->
+      <path d="M180,80 L200,70 L240,65 L280,60 L320,58 L360,55 L400,52 L440,50 L480,48 L520,50 L560,52 L590,58 L610,65 L625,72 L635,80 L640,90 L635,100 L625,110 L615,118 L605,125 L598,135 L595,145 L600,155 L610,162 L620,168 L625,178 L622,188 L615,196 L605,202 L595,208 L585,215 L575,222 L565,228 L555,232 L545,235 L535,240 L525,248 L515,255 L505,260 L495,265 L485,268 L475,270 L465,272 L455,270 L445,265 L435,258 L425,252 L415,248 L405,245 L395,243 L385,242 L375,243 L365,245 L355,248 L345,252 L335,258 L325,262 L315,265 L305,268 L295,270 L285,270 L275,268 L265,262 L255,255 L245,248 L238,242 L232,238 L225,235 L218,232 L212,228 L206,222 L200,215 L194,208 L188,200 L183,192 L180,184 L178,175 L178,165 L180,155 L182,145 L182,135 L180,125 L178,115 L178,105 L180,95 Z" fill="#1a2e4a" stroke="#253548" stroke-width="0.5"/>
+      <!-- 日本列島 -->
+      <ellipse cx="760" cy="148" rx="12" ry="28" fill="#1e3555" stroke="#2a4060" stroke-width="0.5" transform="rotate(-20,760,148)"/>
+      <ellipse cx="748" cy="168" rx="6" ry="14" fill="#1e3555" stroke="#2a4060" stroke-width="0.5" transform="rotate(-15,748,168)"/>
+      <!-- 中国・朝鮮半島 -->
+      <path d="M680,120 L720,115 L750,120 L760,130 L755,145 L740,155 L720,160 L700,158 L685,150 L678,140 Z" fill="#1a2e4a" stroke="#253548" stroke-width="0.5"/>
+      <!-- アフリカ -->
+      <path d="M320,230 L355,225 L375,228 L385,240 L388,255 L385,270 L380,285 L375,300 L372,315 L370,330 L368,345 L368,360 L370,372 L368,380 L362,385 L355,382 L348,375 L342,362 L338,348 L335,334 L332,320 L328,305 L322,290 L316,275 L312,260 L310,245 L312,232 Z" fill="#1a2e4a" stroke="#253548" stroke-width="0.5"/>
+      <!-- イギリス・西ヨーロッパ -->
+      <path d="M178,95 L185,88 L195,85 L205,88 L208,96 L204,104 L195,108 L185,105 Z" fill="#1e3555" stroke="#2a4060" stroke-width="0.5"/>
+      <!-- グリッド線 -->
+      <line x1="0" y1="240" x2="900" y2="240" stroke="#1a2535" stroke-width="0.5" stroke-dasharray="4,8"/>
+      <line x1="450" y1="0" x2="450" y2="480" stroke="#1a2535" stroke-width="0.5" stroke-dasharray="4,8"/>
+
+      <!-- ルート都市の座標に対応する動的要素 -->
+      <g id="routeLayer"></g>
+      <g id="planeLayer"></g>
+    </svg>
+
+    <div id="tooltip" class="tooltip" style="display:none;"></div>
+  </div>
+
+  <div class="prog-wrap" id="progWrap" style="display:none;">
+    <div class="prog-header">
+      <span>🗾 東京</span>
+      <span id="progPct">0%</span>
+      <span>🏆 ロンドン</span>
+    </div>
+    <div class="prog-bar-bg"><div class="prog-bar-fill" id="progBar" style="width:0%"></div></div>
+    <div class="city-list" id="cityList"></div>
+  </div>
+</div>
+
+<script>
+const KEY_ITEMS = 'rm_items_v5';
+const TOTAL_KM  = 14000;
+
+// シルクロードルート（SVG座標 viewBox 0 0 900 480）
+const ROUTE = [
+  { name:'東京',         emoji:'🗾', svgX:760, svgY:155, km:0,     desc:'スタート地点' },
+  { name:'北京',         emoji:'🇨🇳', svgX:710, svgY:140, km:1500,  desc:'1,500km地点' },
+  { name:'ウルムチ',     emoji:'🏜️', svgX:610, svgY:148, km:3500,  desc:'3,500km地点（砂漠の入口）' },
+  { name:'サマルカンド', emoji:'🕌', svgX:545, svgY:155, km:5500,  desc:'5,500km地点（シルクロードの真珠）' },
+  { name:'テヘラン',     emoji:'🇮🇷', svgX:485, svgY:165, km:7000,  desc:'7,000km地点' },
+  { name:'バグダッド',   emoji:'🏛️', svgX:455, svgY:178, km:8500,  desc:'8,500km地点（古代の都）' },
+  { name:'イスタンブール',emoji:'🕌',svgX:395, svgY:158, km:10000, desc:'10,000km地点（東西の交差点）' },
+  { name:'ウィーン',     emoji:'🎵', svgX:330, svgY:142, km:11500, desc:'11,500km地点' },
+  { name:'パリ',         emoji:'🗼', svgX:252, svgY:138, km:13000, desc:'13,000km地点' },
+  { name:'ロンドン',     emoji:'🏆', svgX:198, svgY:130, km:14000, desc:'ゴール！14,000km' },
+];
+
+function loadItems(){try{return JSON.parse(localStorage.getItem(KEY_ITEMS))||[];}catch{return[];}}
+function fmtMin(min){if(!min||min<=0)return'0m';const h=Math.floor(min/60),m=min%60;return h>0?(m>0?`${h}h${m}m`:`${h}h`):`${m}m`;}
+
+// カテゴリ選択を構築
+function buildCatSelect(){
+  const items = loadItems().filter(i=>i.type==='review');
+  const cats  = [...new Set(items.map(i=>i.category).filter(Boolean))];
+  const sel   = document.getElementById('catSelect');
+  sel.innerHTML = '<option value="all">すべての学習記録</option>';
+  for(const c of cats){
+    const o = document.createElement('option');
+    o.value = c; o.textContent = c;
+    sel.appendChild(o);
+  }
+}
+
+function renderMap(){
+  const catVal  = document.getElementById('catSelect').value;
+  const allItems= loadItems().filter(i=>i.type==='review');
+  const items   = catVal==='all' ? allItems : allItems.filter(i=>i.category===catVal);
+  const totalMin= items.reduce((s,i)=>s+(i.minutes||0),0);
+  const distKm  = Math.min(totalMin, TOTAL_KM);
+  const pct     = Math.round(distKm/TOTAL_KM*100);
+  const count   = items.length;
+
+  // Stats
+  document.getElementById('svDist').textContent  = distKm.toLocaleString()+'km';
+  document.getElementById('svPct').textContent   = pct+'%';
+  document.getElementById('svTime').textContent  = fmtMin(totalMin);
+  document.getElementById('svCount').textContent = count+'件';
+
+  if(!count){
+    document.getElementById('emptyMsg').style.display='block';
+    document.getElementById('progWrap').style.display='none';
+    document.getElementById('routeLayer').innerHTML='';
+    document.getElementById('planeLayer').innerHTML='';
+    return;
+  }
+  document.getElementById('emptyMsg').style.display='none';
+  document.getElementById('progWrap').style.display='block';
+
+  // プログレスバー
+  document.getElementById('progBar').style.width = pct+'%';
+  document.getElementById('progPct').textContent = pct+'%';
+
+  // 現在位置を補間
+  const pos = interpolate(distKm);
+
+  // SVGルートを描画
+  buildRouteSVG(distKm, pos);
+
+  // 都市チップ
+  const cityList = document.getElementById('cityList');
+  cityList.innerHTML = ROUTE.map(city=>{
+    const passed  = distKm>=city.km;
+    const isCur   = !passed && (city===ROUTE[0]||ROUTE.find((_,i)=>ROUTE[i+1]===city&&distKm>=ROUTE[i].km));
+    const cls     = passed?'passed': isCur?'current':'';
+    return`<span class="city-chip ${cls}">${city.emoji}${city.name}</span>`;
+  }).join('');
+}
+
+function interpolate(distKm){
+  if(distKm<=0) return{x:ROUTE[0].svgX,y:ROUTE[0].svgY};
+  if(distKm>=TOTAL_KM) return{x:ROUTE[ROUTE.length-1].svgX,y:ROUTE[ROUTE.length-1].svgY};
+  for(let i=1;i<ROUTE.length;i++){
+    if(distKm<=ROUTE[i].km){
+      const prev=ROUTE[i-1], next=ROUTE[i];
+      const r=(distKm-prev.km)/(next.km-prev.km);
+      return{x:prev.svgX+(next.svgX-prev.svgX)*r, y:prev.svgY+(next.svgY-prev.svgY)*r};
+    }
+  }
+  return{x:ROUTE[ROUTE.length-1].svgX,y:ROUTE[ROUTE.length-1].svgY};
+}
+
+function buildRouteSVG(distKm, pos){
+  // ルートライン（点線 = 未通過, 実線 = 通過済み）
+  let routeHTML = '';
+
+  // 全体点線
+  const allPoints = ROUTE.map(c=>`${c.svgX},${c.svgY}`).join(' ');
+  routeHTML += `<polyline points="${allPoints}" fill="none" stroke="#2a3a50" stroke-width="2" stroke-dasharray="6,8"/>`;
+
+  // 通過済み実線
+  const passedPts = [];
+  for(let i=0;i<ROUTE.length;i++){
+    if(ROUTE[i].km<=distKm) passedPts.push(`${ROUTE[i].svgX},${ROUTE[i].svgY}`);
+    else{ passedPts.push(`${pos.x.toFixed(1)},${pos.y.toFixed(1)}`); break; }
+  }
+  if(passedPts.length>=2){
+    routeHTML += `<polyline points="${passedPts.join(' ')}" fill="none" stroke="#f7b731" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`;
+  }
+
+  // 都市マーカー
+  ROUTE.forEach((city,idx)=>{
+    const passed  = distKm>=city.km;
+    const isGoal  = idx===ROUTE.length-1;
+    const isStart = idx===0;
+    const color   = passed ? '#43e97b' : '#2a3a50';
+    const stroke  = passed ? '#2a5040' : '#3a4a5a';
+    const r       = isGoal||isStart ? 9 : 7;
+
+    routeHTML += `<g class="city-marker" data-idx="${idx}" style="cursor:pointer;">
+      <circle cx="${city.svgX}" cy="${city.svgY}" r="${r+4}" fill="transparent"/>
+      <circle cx="${city.svgX}" cy="${city.svgY}" r="${r}" fill="${color}" stroke="${stroke}" stroke-width="1.5"/>
+      <text x="${city.svgX}" y="${city.svgY+4}" text-anchor="middle" font-size="9" fill="${passed?'#0d0f14':'#7a8099'}" font-family="sans-serif" font-weight="700">${isGoal?'🏆':isStart?'S':idx}</text>
+    </g>`;
+
+    // 都市名ラベル
+    const labelY = city.svgY < 200 ? city.svgY-14 : city.svgY+18;
+    routeHTML += `<text x="${city.svgX}" y="${labelY}" text-anchor="middle" font-size="9" fill="${passed?'#43e97b':'#454a60'}" font-family="sans-serif">${city.name}</text>`;
+  });
+
+  document.getElementById('routeLayer').innerHTML = routeHTML;
+
+  // 飛行機アイコン（現在位置）
+  let angle = 0;
+  if(distKm>0 && distKm<TOTAL_KM){
+    const nextPos = interpolate(Math.min(distKm+200,TOTAL_KM));
+    angle = Math.atan2(-(nextPos.y-pos.y),(nextPos.x-pos.x))*180/Math.PI;
+  }
+
+  const px = pos.x.toFixed(1), py = pos.y.toFixed(1);
+  const planeHTML = distKm<TOTAL_KM
+    ? `<g transform="translate(${px},${py}) rotate(${(-angle).toFixed(1)})">
+        <text x="0" y="5" text-anchor="middle" font-size="18" style="filter:drop-shadow(0 0 6px rgba(247,183,49,.8));">✈️</text>
+       </g>`
+    : `<text x="${px}" y="${py}" text-anchor="middle" font-size="22">🏆</text>`;
+  document.getElementById('planeLayer').innerHTML = planeHTML;
+
+  // ツールチップ
+  setupTooltips(distKm);
+}
+
+function setupTooltips(distKm){
+  const svg = document.getElementById('worldMap');
+  const markers = svg.querySelectorAll('.city-marker');
+  const tooltip = document.getElementById('tooltip');
+
+  markers.forEach(marker=>{
+    const idx = parseInt(marker.dataset.idx);
+    const city= ROUTE[idx];
+    const passed= distKm>=city.km;
+    const isCur = !passed && (idx===0||(idx>0&&distKm>=ROUTE[idx-1].km));
+
+    marker.addEventListener('mouseenter', e=>{
+      const rect = svg.getBoundingClientRect();
+      const svgW = rect.width;
+      const scaleX= svgW/900;
+      const scaleY= rect.height/480;
+      const tx = city.svgX*scaleX + rect.left + window.scrollX;
+      const ty = city.svgY*scaleY + rect.top  + window.scrollY;
+      const badge = passed
+        ? '<span class="tooltip-badge tb-done">✅ 通過済み</span>'
+        : isCur
+        ? '<span class="tooltip-badge tb-cur">👣 次の目的地</span>'
+        : '<span class="tooltip-badge tb-fut">未到達</span>';
+      tooltip.innerHTML=`<div class="tooltip-name">${city.emoji} ${city.name}</div><div class="tooltip-info">${city.desc}<br>${city.km.toLocaleString()}km地点</div>${badge}`;
+      tooltip.style.display='block';
+      tooltip.style.left=(tx+12)+'px';
+      tooltip.style.top=(ty-10)+'px';
+    });
+    marker.addEventListener('mouseleave',()=>{ tooltip.style.display='none'; });
+    marker.addEventListener('touchstart', e=>{
+      e.preventDefault();
+      const rect=svg.getBoundingClientRect();
+      tooltip.innerHTML=`<div class="tooltip-name">${city.emoji} ${city.name}</div><div class="tooltip-info">${city.desc}</div>`;
+      tooltip.style.display='block';
+      tooltip.style.left='50%';
+      tooltip.style.top='10px';
+      tooltip.style.transform='translateX(-50%)';
+      setTimeout(()=>tooltip.style.display='none',2500);
+    },{passive:false});
+  });
+}
+
+buildCatSelect();
+renderMap();
+</script>
+</body>
+</html>
