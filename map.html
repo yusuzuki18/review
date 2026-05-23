@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>ReMemory — 学習の旅</title>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;700;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+:root{
+  --bg:#0d0f14;--surface:#13161e;--surface2:#1a1e2a;--border:#252a38;
+  --accent:#5b8fff;--accent2:#ff6b6b;--accent3:#43e97b;--accent4:#f7b731;--accent5:#a78bfa;
+  --text:#e8eaf0;--text-sub:#7a8099;--text-dim:#454a60;
+  --font:'Zen Kaku Gothic New',sans-serif;--mono:'DM Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:var(--font);height:100vh;overflow:hidden;display:flex;flex-direction:column;}
+
+/* HEADER */
+.hdr{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;gap:10px;flex-wrap:wrap;z-index:1000;}
+.hdr-left{display:flex;align-items:center;gap:12px;}
+.back-btn{padding:7px 14px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text-sub);font-family:var(--font);font-size:13px;cursor:pointer;transition:all .2s;text-decoration:none;display:flex;align-items:center;gap:5px;}
+.back-btn:hover{border-color:var(--accent);color:var(--accent);}
+.hdr-title{font-size:16px;font-weight:900;background:linear-gradient(135deg,var(--accent),var(--accent5));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.hdr-sub{font-size:10px;color:var(--text-sub);font-family:var(--mono);}
+
+/* ITEM SELECTOR */
+.item-sel{padding:8px 16px;background:var(--surface2);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-shrink:0;overflow-x:auto;}
+.item-sel label{font-size:11px;color:var(--text-sub);white-space:nowrap;font-family:var(--mono);}
+.item-select{background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--font);font-size:13px;padding:7px 12px;outline:none;flex:1;min-width:0;max-width:300px;}
+.item-select:focus{border-color:var(--accent);}
+
+/* STATS BAR */
+.stats-bar{display:flex;gap:8px;padding:10px 16px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;overflow-x:auto;}
+.stat-chip{display:flex;flex-direction:column;align-items:center;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:8px 14px;min-width:80px;flex-shrink:0;}
+.stat-val{font-size:16px;font-weight:900;font-family:var(--mono);line-height:1;margin-bottom:2px;}
+.stat-lbl{font-size:9px;color:var(--text-sub);letter-spacing:.5px;text-transform:uppercase;}
+.sv-dist{color:var(--accent4);}
+.sv-pct{color:var(--accent3);}
+.sv-time{color:var(--accent);}
+.sv-level{color:var(--accent5);}
+
+/* MAP */
+#map{flex:1;min-height:0;}
+.leaflet-container{background:#0a0e1a !important;}
+
+/* PROGRESS OVERLAY */
+.progress-overlay{position:absolute;bottom:90px;left:50%;transform:translateX(-50%);background:rgba(13,15,20,.92);border:1px solid var(--border);border-radius:14px;padding:12px 20px;z-index:400;backdrop-filter:blur(8px);min-width:280px;max-width:90vw;}
+.prog-label{font-size:10px;color:var(--text-sub);letter-spacing:1px;text-transform:uppercase;font-family:var(--mono);margin-bottom:6px;display:flex;justify-content:space-between;}
+.prog-bar-wrap{background:var(--surface2);border-radius:100px;height:10px;overflow:hidden;margin-bottom:8px;}
+.prog-bar{height:100%;border-radius:100px;background:linear-gradient(90deg,var(--accent4),var(--accent3));transition:width 1s ease;}
+.prog-cities{display:flex;justify-content:space-between;font-size:10px;font-family:var(--mono);color:var(--text-sub);}
+.prog-cities span.passed{color:var(--accent3);}
+.prog-cities span.current-city{color:var(--accent4);font-weight:700;}
+
+/* CITY POPUP */
+.leaflet-popup-content-wrapper{background:var(--surface) !important;border:1px solid var(--border) !important;border-radius:12px !important;box-shadow:0 8px 32px rgba(0,0,0,.6) !important;color:var(--text) !important;}
+.leaflet-popup-tip{background:var(--surface) !important;}
+.leaflet-popup-content{margin:12px 16px !important;font-family:var(--font) !important;color:var(--text) !important;}
+.popup-city{font-size:15px;font-weight:700;margin-bottom:4px;}
+.popup-info{font-size:12px;color:var(--text-sub);line-height:1.6;}
+.popup-status{font-size:11px;font-family:var(--mono);margin-top:6px;padding:3px 8px;border-radius:100px;display:inline-block;}
+.popup-done{background:rgba(67,233,123,.15);color:var(--accent3);}
+.popup-current{background:rgba(247,183,49,.2);color:var(--accent4);}
+.popup-future{background:rgba(255,255,255,.05);color:var(--text-dim);}
+
+/* EMPTY STATE */
+.empty-map{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:300;pointer-events:none;}
+.empty-map-icon{font-size:52px;margin-bottom:14px;opacity:.5;}
+.empty-map-text{font-size:15px;color:var(--text-sub);font-weight:700;}
+.empty-map-sub{font-size:12px;color:var(--text-dim);margin-top:6px;}
+
+/* BOTTOM NAV */
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);display:flex;z-index:500;padding-bottom:env(safe-area-inset-bottom);}
+.nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 4px 8px;border:none;background:transparent;color:var(--text-dim);font-family:var(--font);font-size:10px;cursor:pointer;}
+.nav-btn.active{color:var(--accent);}
+.nav-icon{font-size:20px;}
+
+/* PLANE ICON */
+.plane-icon{font-size:24px;filter:drop-shadow(0 0 8px rgba(247,183,49,.8));}
+.goal-icon{font-size:28px;filter:drop-shadow(0 0 10px rgba(67,233,123,.8));}
+.start-icon{font-size:24px;filter:drop-shadow(0 0 8px rgba(91,143,255,.8));}
+.city-icon{font-size:18px;}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-left">
+    <a class="back-btn" href="index.html">← 戻る</a>
+    <div>
+      <div class="hdr-title">✈️ 学習の旅</div>
+      <div class="hdr-sub">東京 → ロンドン 9,560km</div>
+    </div>
+  </div>
+</div>
+
+<div class="item-sel">
+  <label>復習アイテム：</label>
+  <select class="item-select" id="itemSelect" onchange="loadItem()">
+    <option value="">— アイテムを選択 —</option>
+  </select>
+</div>
+
+<div class="stats-bar" id="statsBar">
+  <div class="stat-chip"><div class="stat-val sv-dist" id="svDist">0km</div><div class="stat-lbl">進んだ距離</div></div>
+  <div class="stat-chip"><div class="stat-val sv-pct" id="svPct">0%</div><div class="stat-lbl">達成率</div></div>
+  <div class="stat-chip"><div class="stat-val sv-time" id="svTime">0m</div><div class="stat-lbl">学習時間</div></div>
+  <div class="stat-chip"><div class="stat-val sv-level" id="svLevel">L0</div><div class="stat-lbl">復習レベル</div></div>
+</div>
+
+<div style="position:relative;flex:1;min-height:0;">
+  <div id="map"></div>
+  <div id="emptyState" class="empty-map">
+    <div class="empty-map-icon">🗺️</div>
+    <div class="empty-map-text">アイテムを選択してください</div>
+    <div class="empty-map-sub">復習スケジュールに登録されたアイテムの<br>学習時間が旅の距離になります</div>
+  </div>
+  <div class="progress-overlay" id="progressOverlay" style="display:none;">
+    <div class="prog-label">
+      <span>🗾 東京</span>
+      <span id="progPct">0%</span>
+      <span>🏆 ロンドン</span>
+    </div>
+    <div class="prog-bar-wrap"><div class="prog-bar" id="progBar" style="width:0%"></div></div>
+    <div class="prog-cities" id="progCities"></div>
+  </div>
+</div>
+
+<script>
+// ===== ルート定義 =====
+const TOTAL_KM = 9560;
+const ROUTE = [
+  { name:'東京',       emoji:'🗾', lat:35.6762, lng:139.6503, km:0,    level:0,  day:0   },
+  { name:'上海',       emoji:'🇨🇳', lat:31.2304, lng:121.4737, km:1100, level:1,  day:1   },
+  { name:'バンコク',   emoji:'🇹🇭', lat:13.7563, lng:100.5018, km:2200, level:2,  day:3   },
+  { name:'デリー',     emoji:'🇮🇳', lat:28.6139, lng:77.2090,  km:3500, level:3,  day:7   },
+  { name:'ドバイ',     emoji:'🇦🇪', lat:25.2048, lng:55.2708,  km:4800, level:4,  day:14  },
+  { name:'モスクワ',   emoji:'🇷🇺', lat:55.7558, lng:37.6173,  km:6200, level:5,  day:30  },
+  { name:'ワルシャワ', emoji:'🇵🇱', lat:52.2297, lng:21.0122,  km:7400, level:6,  day:60  },
+  { name:'ベルリン',   emoji:'🇩🇪', lat:52.5200, lng:13.4050,  km:8300, level:7,  day:90  },
+  { name:'パリ',       emoji:'🇫🇷', lat:48.8566, lng:2.3522,   km:9000, level:8,  day:180 },
+  { name:'ロンドン',   emoji:'🏆',  lat:51.5074, lng:-0.1278,  km:9560, level:9,  day:365 },
+];
+
+// ===== データ =====
+const KEY_ITEMS = 'rm_items_v5';
+function loadItems(){try{return JSON.parse(localStorage.getItem(KEY_ITEMS))||[];}catch{return[];}}
+function fmtMin(min){if(!min||min<=0)return'0m';const h=Math.floor(min/60),m=min%60;return h>0?(m>0?`${h}h${m}m`:`${h}h`):`${m}m`;}
+
+// ===== MAP INIT =====
+const map = L.map('map', {
+  center: [35, 60],
+  zoom: 3,
+  zoomControl: true,
+  attributionControl: true,
+});
+
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  attribution: '© OpenStreetMap © CARTO',
+  subdomains: 'abcd',
+  maxZoom: 19,
+}).addTo(map);
+
+// ルート全体の点線
+const fullRouteCoords = ROUTE.map(c => [c.lat, c.lng]);
+const dottedLine = L.polyline(fullRouteCoords, {
+  color: '#454a60',
+  weight: 2,
+  dashArray: '6, 8',
+  opacity: 0.7,
+}).addTo(map);
+
+// 都市マーカー（常時表示）
+ROUTE.forEach((city, idx) => {
+  const isStart = idx === 0;
+  const isGoal  = idx === ROUTE.length - 1;
+  const iconHtml = isStart
+    ? `<div class="start-icon">${city.emoji}</div>`
+    : isGoal
+    ? `<div class="goal-icon">${city.emoji}</div>`
+    : `<div class="city-icon">${city.emoji}</div>`;
+
+  const icon = L.divIcon({
+    html: iconHtml,
+    className: '',
+    iconSize: isGoal ? [32,32] : [24,24],
+    iconAnchor: isGoal ? [16,16] : [12,12],
+  });
+
+  const marker = L.marker([city.lat, city.lng], { icon }).addTo(map);
+  const distLabel = city.km === 0 ? 'スタート' : city.km === TOTAL_KM ? 'ゴール 🏆' : `${city.km.toLocaleString()}km地点`;
+  const levelLabel = city.level === 0 ? '登録時' : city.level === 9 ? '完全習得！' : `L${city.level}（${city.day}日後）`;
+  marker.bindPopup(`
+    <div class="popup-city">${city.emoji} ${city.name}</div>
+    <div class="popup-info">${distLabel}<br>${levelLabel}</div>
+  `);
+});
+
+// 動的レイヤー
+let passedLine = null;
+let planeMarker = null;
+
+// ===== POPULATE SELECT =====
+function populateSelect(){
+  const items = loadItems().filter(i => i.type === 'schedule');
+  const sel = document.getElementById('itemSelect');
+  sel.innerHTML = '<option value="">— アイテムを選択 —</option>';
+  if(!items.length){
+    sel.innerHTML += '<option disabled>復習スケジュールのアイテムがありません</option>';
+    return;
+  }
+  for(const item of items){
+    const opt = document.createElement('option');
+    opt.value = item.id;
+    opt.textContent = item.title + (item.category ? ` [${item.category}]` : '');
+    sel.appendChild(opt);
+  }
+}
+
+// ===== LOAD ITEM =====
+function loadItem(){
+  const id = parseInt(document.getElementById('itemSelect').value);
+  if(!id){ clearMap(); return; }
+  const item = loadItems().find(i => i.id === id);
+  if(!item){ clearMap(); return; }
+
+  document.getElementById('emptyState').style.display = 'none';
+  document.getElementById('progressOverlay').style.display = 'block';
+
+  // 学習時間合計（登録時 + 復習履歴の時間は現在はitem.minutesのみ）
+  const totalMin = item.minutes || 0;
+  // 進んだ距離（1分 = 1km、上限9560km）
+  const distKm = Math.min(totalMin, TOTAL_KM);
+  const pct = Math.round(distKm / TOTAL_KM * 100);
+  const level = item.level || 0;
+
+  // Stats更新
+  document.getElementById('svDist').textContent = distKm.toLocaleString() + 'km';
+  document.getElementById('svPct').textContent = pct + '%';
+  document.getElementById('svTime').textContent = fmtMin(totalMin);
+  document.getElementById('svLevel').textContent = 'L' + level;
+
+  // プログレスバー
+  document.getElementById('progBar').style.width = pct + '%';
+  document.getElementById('progPct').textContent = pct + '%';
+
+  // 都市ラベル
+  const cityLabels = ROUTE.map((city, idx) => {
+    const passed = distKm >= city.km;
+    const isCurrent = !passed && (idx === 0 || distKm >= ROUTE[idx-1].km);
+    const cls = passed ? 'passed' : isCurrent ? 'current-city' : '';
+    return `<span class="${cls}">${city.emoji}</span>`;
+  }).join('');
+  document.getElementById('progCities').innerHTML = cityLabels;
+
+  // 現在地の座標を補間
+  const pos = interpolatePosition(distKm);
+
+  // 通過済みルートを描画
+  if(passedLine) map.removeLayer(passedLine);
+  const passedCoords = getPassedCoords(distKm);
+  if(passedCoords.length >= 2){
+    passedLine = L.polyline(passedCoords, {
+      color: '#f7b731',
+      weight: 3,
+      opacity: 0.9,
+    }).addTo(map);
+  }
+
+  // 飛行機マーカー
+  if(planeMarker) map.removeLayer(planeMarker);
+
+  // 進行方向の角度を計算
+  const angle = getAngle(distKm);
+  const planeIcon = L.divIcon({
+    html: `<div style="font-size:26px;transform:rotate(${angle}deg);filter:drop-shadow(0 0 10px rgba(247,183,49,.9));line-height:1;">✈️</div>`,
+    className: '',
+    iconSize: [30, 30],
+    iconAnchor: [15, 15],
+  });
+
+  planeMarker = L.marker([pos.lat, pos.lng], { icon: planeIcon, zIndexOffset: 1000 }).addTo(map);
+
+  // 現在地の都市情報をポップアップ
+  const nearCity = getNearestCity(distKm);
+  const remaining = TOTAL_KM - distKm;
+  planeMarker.bindPopup(`
+    <div class="popup-city">✈️ 現在地</div>
+    <div class="popup-info">
+      ${item.title}<br>
+      進んだ距離：${distKm.toLocaleString()}km<br>
+      残り：${remaining.toLocaleString()}km<br>
+      学習時間：${fmtMin(totalMin)}
+    </div>
+    <div class="popup-status popup-current">L${level} 復習中</div>
+  `).openPopup();
+
+  // 地図をアニメーションで現在地に移動
+  map.flyTo([pos.lat, pos.lng], 4, { duration: 1.5 });
+}
+
+// ===== HELPERS =====
+function interpolatePosition(distKm){
+  if(distKm <= 0) return { lat: ROUTE[0].lat, lng: ROUTE[0].lng };
+  if(distKm >= TOTAL_KM) return { lat: ROUTE[ROUTE.length-1].lat, lng: ROUTE[ROUTE.length-1].lng };
+  for(let i = 1; i < ROUTE.length; i++){
+    if(distKm <= ROUTE[i].km){
+      const prev = ROUTE[i-1], next = ROUTE[i];
+      const ratio = (distKm - prev.km) / (next.km - prev.km);
+      return {
+        lat: prev.lat + (next.lat - prev.lat) * ratio,
+        lng: prev.lng + (next.lng - prev.lng) * ratio,
+      };
+    }
+  }
+  return { lat: ROUTE[ROUTE.length-1].lat, lng: ROUTE[ROUTE.length-1].lng };
+}
+
+function getPassedCoords(distKm){
+  const coords = [];
+  for(let i = 0; i < ROUTE.length; i++){
+    if(ROUTE[i].km <= distKm){
+      coords.push([ROUTE[i].lat, ROUTE[i].lng]);
+    } else {
+      // 途中まで
+      const pos = interpolatePosition(distKm);
+      coords.push([pos.lat, pos.lng]);
+      break;
+    }
+  }
+  return coords;
+}
+
+function getAngle(distKm){
+  const pos = interpolatePosition(distKm);
+  const nextPos = interpolatePosition(Math.min(distKm + 100, TOTAL_KM));
+  const dx = nextPos.lng - pos.lng;
+  const dy = nextPos.lat - pos.lat;
+  // 飛行機アイコンは右向きが0度なので調整
+  return Math.atan2(-dy, dx) * 180 / Math.PI + 45;
+}
+
+function getNearestCity(distKm){
+  let nearest = ROUTE[0];
+  for(const city of ROUTE){
+    if(city.km <= distKm) nearest = city;
+    else break;
+  }
+  return nearest;
+}
+
+function clearMap(){
+  document.getElementById('emptyState').style.display = 'flex';
+  document.getElementById('progressOverlay').style.display = 'none';
+  if(passedLine){ map.removeLayer(passedLine); passedLine = null; }
+  if(planeMarker){ map.removeLayer(planeMarker); planeMarker = null; }
+  document.getElementById('svDist').textContent = '0km';
+  document.getElementById('svPct').textContent = '0%';
+  document.getElementById('svTime').textContent = '0m';
+  document.getElementById('svLevel').textContent = 'L0';
+  map.flyTo([35, 60], 3, { duration: 1 });
+}
+
+// ===== INIT =====
+populateSelect();
+map.flyTo([35, 60], 3);
+</script>
+</body>
+</html>
